@@ -57,7 +57,9 @@ private:
    rev::spark::SparkMax m_driveMotor;
    rev::spark::SparkMax m_turningMotor;
 
+
    //   frc::Encoder m_driveEncoder;
+   //rev::spark::SparkRelativeEncoder m_driveEncoder = const_cast<rev::spark::SparkMax&>(m_turningMotor).GetEncoder();
    rev::spark::SparkRelativeEncoder m_driveEncoder;
    frc::AnalogInput m_turningEncoder;
    int m_turningEncoderOffset;

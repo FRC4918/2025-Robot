@@ -127,11 +127,11 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
                            const int turningEncoderOffset)
   : m_driveMotor(driveMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
     m_turningMotor(turningMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
-    m_driveEncoder(m_driveMotor.GetEncoder()),//formerly passed rev::SparkRelativeEncoder::Type::kHallSensor to GetEncoder
-    m_turningEncoder(turningEncoderSlot),
-    m_turningEncoderOffset(turningEncoderOffset)
+   m_driveEncoder(m_driveMotor.GetEncoder()),
+   m_turningEncoder(turningEncoderSlot),
+   m_turningEncoderOffset(turningEncoderOffset)
 {
-
+   
    // Initialize both CAN Spark-driven NEO motors.
    SparkMaxConfig drive_config{};
    SparkMaxConfig turn_config{};
@@ -171,11 +171,11 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    //  pm_turningEncoder = new frc::AnalogInput(turningEncoderSlot);
    //  pm_turningEncoder->GetAverageBits();
    //  pm_turningEncoder->GetOversampleBits();
-   std::cout << "receiving average/oversample bits "
-             << m_turningEncoder.GetAverageBits() << "/"
-             << m_turningEncoder.GetOversampleBits() << std::endl;
-   std::cout << "receiving Sample Rate " << m_turningEncoder.GetSampleRate()
-                                                                  << std::endl;
+   // std::cout << "receiving average/oversample bits "
+   //           << m_turningMotor.GetAverageBits() << "/"
+   //           << m_turningEncoder.GetOversampleBits() << std::endl;
+   // std::cout << "receiving Sample Rate " << m_turningEncoder.GetSampleRate()
+   //                                                                << std::endl;
 
    // Set the distance (in this case, angle) per pulse for the turning encoder.
    // This is the the angle through an entire rotation (2 * std::numbers::pi)
@@ -211,6 +211,7 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
 
 frc::SwerveModulePosition SwerveModule::GetPosition() const
 {
+   
    return {units::meter_t{m_driveEncoder.GetPosition()},
            units::radian_t{(-((360 *
                                m_turningEncoder.GetAverageValue() / 4070 +

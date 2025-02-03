@@ -8,6 +8,8 @@
 #include <frc/Joystick.h>
 #include "Drivetrain.h"
 #include <iostream>
+// #include <frc/Encoder.h>
+// #include <frc/smartdashboard/SmartDashboard.h>
 
 //Robot Pos Variables
 static frc::Pose2d pose;
@@ -18,6 +20,10 @@ class Robot : public frc::TimedRobot {
 frc::Joystick m_Console{3};
 
   public:
+  // frc::Encoder leftEncoder{0, 1};  // DIO ports 0 and 1 for the left encoder ...
+  // frc::Encoder rightEncoder{2, 3}; // DIO ports 2 and 3 for the right encoder ...
+
+
     void RobotInit() override {
         //initialize motors/sensors/etc. here
     }
@@ -31,7 +37,12 @@ frc::Joystick m_Console{3};
     }
 
     void TeleopPeriodic() override {
-  
+      // m_swerve.m_frontLeft.GetPosition();
+      // double leftDistance = leftEncoder.GetDistance();
+      // double rightDistance = rightEncoder.GetDistance();
+      // std::cout << "Left Encoder Distance: " << leftDistance << std::endl;
+      // std::cout << "Right Encoder Distance: " << rightDistance << std::endl;
+
       DriveWithJoystick(true);
       m_swerve.UpdateOdometry();
     }
@@ -53,20 +64,22 @@ frc::Joystick m_Console{3};
     void DriveWithJoystick(bool fieldRelative) {
       // SLOOOOOOWMODE
       // low speed by 0.3 if holding r-trigger //0.2
-      double lowGear = m_driverController.GetRightTriggerAxis() > 0.1 ? 0.3 : 1.0;
+      //double lowGear = m_driverController.GetRightTriggerAxis() > 0.1 ? 0.3 : 1.0;
 
       // Get the x speed. We are inverting this because Xbox controllers return
       // negative values when we push forward.
       auto xSpeed = -m_xspeedLimiter.Calculate(
                               frc::ApplyDeadband(m_driverController.GetLeftY(), 0.2)) *
-                          Drivetrain::kMaxSpeed * lowGear;
+                          Drivetrain::kMaxSpeed; //* lowGear;
+      //auto xSpeed = (units::velocity::meters_per_second_t) 0;
 
       // Get the y speed or sideways/strafe speed. We are inverting this because
       // we want a positive value when we pull to the left. Xbox controllers
       // return positive values when you pull to the right by default.
       auto ySpeed = -m_yspeedLimiter.Calculate(
                               frc::ApplyDeadband(m_driverController.GetLeftX(), 0.2)) *
-                          Drivetrain::kMaxSpeed * lowGear;
+                          Drivetrain::kMaxSpeed; //* lowGear;
+      // auto ySpeed = (units::velocity::meters_per_second_t) 0;
 
       // Get the rate of angular rotation. We are inverting this because we want a
       // positive value when we pull to the left (remember, CCW is positi std::cout << "Wheel angles FL,FR/BL,BR:"
@@ -75,7 +88,7 @@ frc::Joystick m_Console{3};
       // the right by default.
       auto rot = -m_rotLimiter.Calculate(
                           frc::ApplyDeadband(m_driverController.GetRightX(), 0.2)) *
-                      Drivetrain::kMaxAngularSpeed * lowGear;
+                      Drivetrain::kMaxAngularSpeed; //* lowGear;
 
     // Relative Switch (A)
     fieldRelative = !m_driverController.GetAButton();

@@ -46,43 +46,43 @@ void Drivetrain::Drive( units::meters_per_second_t xSpeed,
          // autonomous maneuvers call this function with that argument false
          // when they want to stop the robot completely, but teleop always
          // sets that argument true.
-   if ( ( xSpeed < (units::meters_per_second_t)0.001          ) &&
-        (         -(units::meters_per_second_t)0.001 < xSpeed ) &&
-        ( ySpeed < (units::meters_per_second_t)0.001          ) &&
-        (         -(units::meters_per_second_t)0.001 < ySpeed ) &&
-        ( !fieldRelative                                      ) &&
-        (    rot < (units::radians_per_second_t)0.001         ) &&
-        (         -(units::radians_per_second_t)0.001 < rot   )    ) {
-      fl.angle = (frc::Rotation2d)(units::degree_t)45.0; //-45
-      fr.angle = (frc::Rotation2d)(units::degree_t)-45.0;  //45
-      bl.angle = (frc::Rotation2d)(units::degree_t)-45.0;  //45
-      br.angle = (frc::Rotation2d)(units::degree_t)45.0; //-45
-   }
+   // if ( ( xSpeed < (units::meters_per_second_t)0.001          ) &&
+   //      (         -(units::meters_per_second_t)0.001 < xSpeed ) &&
+   //      ( ySpeed < (units::meters_per_second_t)0.001          ) &&
+   //      (         -(units::meters_per_second_t)0.001 < ySpeed ) &&
+   //      ( !fieldRelative                                      ) &&
+   //      (    rot < (units::radians_per_second_t)0.001         ) &&
+   //      (         -(units::radians_per_second_t)0.001 < rot   )    ) {
+   //    fl.angle = (frc::Rotation2d)(units::degree_t)45.0; //-45
+   //    fr.angle = (frc::Rotation2d)(units::degree_t)-45.0;  //45
+   //    bl.angle = (frc::Rotation2d)(units::degree_t)-45.0;  //45
+   //    br.angle = (frc::Rotation2d)(units::degree_t)45.0; //-45
+   // }
 
    if ( 0 == iCallCount%50 )
    {
-      //      auto [distance0, angle0] = m_frontLeft.GetPosition();
-      //      auto [distance1, angle1] = m_frontRight.GetPosition();
-      //      auto [distance2, angle2] = m_backRight.GetPosition();
-      //      auto [distance3, angle3] = m_backLeft.GetPosition();
+           auto [distance0, angle0] = m_frontLeft.GetPosition();
+           auto [distance1, angle1] = m_frontRight.GetPosition();
+           auto [distance2, angle2] = m_backRight.GetPosition();
+           auto [distance3, angle3] = m_backLeft.GetPosition();
 
-      //      std::cout << "FrontLeft: " << distance0.value() << ", " <<
-      //                                angle0.Degrees().value() << std::endl;
-      //      std::cout << "FrontRight: " << distance1.value() << ", " <<
-      //                                 angle1.Degrees().value() << std::endl;
-      //      std::cout << "BackRight: " << distance2.value() << ", " <<
-      //                                angle2.Degrees().value() << std::endl;
-      //      std::cout << "BackLeft: " << distance3.value() << ", " <<
-      //                                angle3.Degrees().value() << std::endl;
+           std::cout << "FrontLeft: " << distance0.value() << ", " <<
+                                     angle0.Degrees().value() << std::endl;
+           std::cout << "FrontRight: " << distance1.value() << ", " <<
+                                      angle1.Degrees().value() << std::endl;
+           std::cout << "BackRight: " << distance2.value() << ", " <<
+                                     angle2.Degrees().value() << std::endl;
+           std::cout << "BackLeft: " << distance3.value() << ", " <<
+                                     angle3.Degrees().value() << std::endl;
 
-      //    std::cout << "Current Gyro Position: " << m_gyro.GetAngle()
-      //              << std::endl;
+            cout << "Current Gyro Position: " << m_gyro.GetAngle().value()
+                   << std::endl;
    }
    iCallCount++;
 
    m_frontLeft.SetDesiredState(  fl, bFreezeDriveMotors );
    m_frontRight.SetDesiredState( fr, bFreezeDriveMotors );
-   m_backLeft.SetDesiredState(   bl, bFreezeDriveMotors );
+   m_backLeft.SetDesiredState(   bl, bFreezeDriveMotors );  //THESE
    m_backRight.SetDesiredState(  br, bFreezeDriveMotors );
 
    // print wheel degrees for offset testing

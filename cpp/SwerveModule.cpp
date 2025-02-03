@@ -132,14 +132,14 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    m_turningEncoderOffset(turningEncoderOffset)
 {
    
+   MotorInitSpark(m_driveMotor);
+   MotorInitSpark(m_turningMotor);
+
+
    // Initialize both CAN Spark-driven NEO motors.
    SparkMaxConfig drive_config{};
    SparkMaxConfig turn_config{};
    
-
-   
-   MotorInitSpark(m_driveMotor);
-   MotorInitSpark(m_turningMotor);
    turn_config.SmartCurrentLimit(10, 5, 5000);
    drive_config.ClosedLoopRampRate(0.1);
    drive_config.OpenLoopRampRate(0.1);
@@ -162,6 +162,10 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    // so adjust the new divisor: (39.0 * 4.09/6.096) = 26.17
    //m_driveEncoder.SetVelocityConversionFactor(1.0 / 2340.0);
    drive_config.encoder.VelocityConversionFactor(1.0 / 2340.0);
+
+   //configure motors
+   m_driveMotor.Configure(drive_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+   m_turningMotor.Configure(turn_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
 
 
 
@@ -197,6 +201,8 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    // cycles.
    // m_driveMotor.BurnFlash();       // do this only when config changes.
    // m_turningMotor.BurnFlash();     // do this only when config changes.
+
+
 }
 
 // SwerveModule::SwerveModule(int driveMotorCanID,

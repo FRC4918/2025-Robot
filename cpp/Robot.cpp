@@ -44,6 +44,10 @@ static double desiredYaw;
 static double needToMoveDist;
 static double headOnOffsetDeg; // how off are we from being headon with the tag?
 
+//PID idk
+static double atPreviousError;
+static double atIntegral;
+
 
 class Robot : public frc::TimedRobot {
 
@@ -187,11 +191,12 @@ static void VisionThread() {
 
 
 
-
         // Get angle we're off from being head-on with the tag (0 degrees)
-        auto tagHeadOnDeg = estimator.Estimate(*detection).Rotation().Z().to<double>();
-        std::cout << "Tag ID: " << detection->GetId() << " | Yaw: " << tagHeadOnDeg << " degrees" << std::endl;
+        double tagHeadOnDegs[3] = { rotation.X().value(), rotation.Y().value(), rotation.Z().value() };
+        //auto tagHeadOnDeg = tagsTable->GetEntry("apriltags/pose_X")
 
+        std::cout << "Tag ID: " << detection->GetId() << " | X: " << tagHeadOnDegs[0] << " | Y: " << tagHeadOnDegs[1] << " | Z: " << tagHeadOnDegs[2]
+          << std::endl;
         double tagRotDist = (g_size.width/2)-c.x; //tag distance from center
         double tagRotDistDeg = tagRotDist / 10; // tag distance in degrees, roughly
         
@@ -218,7 +223,7 @@ static void VisionThread() {
               
               // Predator Alignment
               // Tag headon
-              headOnOffsetDeg = tagHeadOnDeg;
+              headOnOffsetDeg = tagHeadOnDegs[1];
               
               break;
             }
@@ -364,11 +369,36 @@ frc::Joystick m_Console{3};
       //           << std::endl;
     }
 
-    // Hunt and pounce (predator alignment) April Tag (Right Bumper)
+
+    // Pressed once
+    if (m_driverController.GetRightBumperButtonPressed()) {
+      atPreviousError = 0;
+      atIntegral = 0;
+    }
+
+    // Held. Hunt and pounce (predator alignment) April Tag (Right Bumper)
     if (m_driverController.GetRightBumper()) {
-      if (atData.headOnOffsetDeg > 0.005 ) {
-        xSpeed = 1;
+      // if (atData.headOnOffsetDeg > 0.05 ) { // 0.005
+      //   ySpeed = (units::velocity::meters_per_second_t) 0.1;
+      // } else if (atData.headOnOffsetDeg < -0.05) { // 0.005
+      //   ySpeed = (units::velocity::meters_per_second_t) -0.1;
+      // } else { // otherwise, if we are aligned with tag, then start moving towards it
+      //   std::cout << "Lined up" << std::endl;
+      // } 
+
+
+      if (std::abs(atData.headOnOffsetDeg) > 0.05) {
+        PIDReturn VisionPIDReturn = VisionPIDController(atData.headOnOffsetDeg, atPreviousError, atIntegral);
+        ySpeed = (units::velocity::meters_per_second_t) -VisionPIDReturn.PIDReturnValue;
+        std::cout << "PID Return: " << VisionPIDReturn.PIDReturnValue << std::endl;
+        atPreviousError = VisionPIDReturn.previousError;
+        atIntegral = VisionPIDReturn.integral;
       }
+      
+      
+
+      
+      rot = -atData.radsToTurn*10; // turn robot to face tag
 
       fieldRelative = true;
     }
@@ -381,6 +411,45 @@ frc::Joystick m_Console{3};
 
 
     // OTHER FUNCTIONS
+
+
+
+    struct PIDReturn {
+      double PIDReturnValue;
+      double previousError;
+      double integral;
+    };
+
+    /**
+     * processVariable = Yaw/Y axis rotation
+     * previousError = 0 initial, last error next times. how far away we were on the last loop
+     * integral = 0 initial, feed it from returns
+     */
+    PIDReturn VisionPIDController(double processVariable, double previousError, double integral) {
+      double setpoint = 0;
+      double Kp = 1; //1 is cool, first to chage
+      double Ki = 0; //0.1 too high?
+      double Kd = 0.1; //0.1 is cool, 2nd to change
+
+      double error = setpoint - processVariable;
+      integral += error;
+      double derivative = error - previousError;
+      previousError = error;
+      double returnVal = Kp * error + Ki * integral + Kd * derivative;
+
+
+      
+
+      PIDReturn returnValues = {
+        returnVal,
+        previousError,
+        integral,
+      };
+      return returnValues;
+    }
+
+
+
 
 
     struct ATagVars {
@@ -404,12 +473,20 @@ frc::Joystick m_Console{3};
        (units::angular_velocity::radians_per_second_t) degreesToTurn * M_PI / 180;
       
       
-      aData.radsToTurn = radsToTurn;
-      aData.headOnOffsetDeg = headOnOffsetDeg;
-      aData.needToMoveDist = needToMoveDist;
+      atData.radsToTurn = radsToTurn;
+      atData.headOnOffsetDeg = headOnOffsetDeg;
+      atData.needToMoveDist = needToMoveDist;
       
-      return aData;
+      return atData;
     }
+
+
+  
+
+
+
+
+
 };
 
 

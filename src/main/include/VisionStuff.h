@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cameraserver/CameraServer.h>
 #include <units/angle.h>
 
@@ -9,6 +11,7 @@ extern int selectedTag;
 extern double desiredYaw;
 extern double needToMoveDist;
 extern double headOnOffsetDeg; // how off are we from being headon with the tag?
+
 
 
 void VisionThread();

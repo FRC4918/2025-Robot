@@ -2,4 +2,4 @@
 
 using namespace rev::spark;
 
-void MotorInitSpark(SparkMax &m_motor);
+void ElevatorMotorInitSpark(SparkMax &m_motor);

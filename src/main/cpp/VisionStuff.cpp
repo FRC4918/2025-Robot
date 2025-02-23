@@ -16,41 +16,15 @@
 
 cs::UsbCamera camera1;
 units::angle::degree_t gyroYawHeading;
-int selectedTag;
+
+int selectedTag = 0;
+
+double desiredYaw = 0.0;
+double needToMoveDist = 0.0;
+double headOnOffsetDeg = 0.0;
 
 void VisionThread() {
   frc::AprilTagDetector detector;
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   
 
   // look for tag36h11, correct 3 error bits

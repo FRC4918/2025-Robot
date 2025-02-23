@@ -73,7 +73,7 @@ frc::Joystick m_Console{3};
       
       //frc::SmartDashboard::PutString("Holding Note", noteInShooter);
       
-      MotorInitSpark(m_LeftElevatorMotor);
+      ElevatorMotorInitSpark(m_LeftElevatorMotor);
 
       // We need to run our vision program in a separate thread.
       // If not run separately (in parallel), our robot program will never

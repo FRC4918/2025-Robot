@@ -13,7 +13,7 @@ using namespace rev::spark;
 /* These settings can be superseded after this function is called,     */
 /* for the needs of each specific SparkMax-driven motor.               */
 /*---------------------------------------------------------------------*/
-void MotorInitSpark(SparkMax &m_motor)
+void ElevatorMotorInitSpark(SparkMax &m_motor)
 {
     SparkMaxConfig config{};
 

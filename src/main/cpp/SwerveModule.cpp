@@ -12,8 +12,10 @@
 
 #include <rev/SparkMax.h>
 #include <rev/config/SparkMaxConfig.h>
-// #include <rev/CANSparkMax.h>
-// #include <rev/SparkMaxConfig.h>
+#include "ctre/Phoenix.h"
+#include <ctre/phoenix6/TalonFX.hpp>
+#include <ctre/phoenix6/CANcoder.hpp>
+#include <ctre/phoenix6/core/CoreTalonFX.hpp>
 
 
 using namespace rev::spark;
@@ -30,10 +32,6 @@ using namespace rev::spark;
 void MotorInitSpark(SparkMax &m_motor)
 {
    SparkMaxConfig config{};
-
-   // Set argument to true to also burn defaults into SparkMax flash.
-   // 2025- not anymore
-   //m_motor.RestoreFactoryDefaults();
 
    //m_motor.EnableSoftLimit(SparkMax::SoftLimitDirection::kForward,
                            //false);
@@ -121,18 +119,94 @@ void MotorInitSpark(SparkMax &m_motor)
 
 } // MotorInitSpark()
 
+/*---------------------------------------------------------------------*/
+/* MotorInitKraken()                                                   */
+/* Setup the initial configuration of a Kraken motor, driven by an     */
+/* integrated TalonFX controller.  These settings can be superseded    */
+/* after this function is called, for the needs of each specific       */
+/* Kraken motor.                                                       */
+/*---------------------------------------------------------------------*/
+void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
+{
+   //SparkMaxConfig config{};
+   ctre::phoenix6::configs::TalonFXConfiguration config{};
+
+   //config.softLimit.ForwardSoftLimitEnabled(false);
+   //config.softLimit.ReverseSoftLimitEnabled(false);
+   ctre::phoenix6::configs::SoftwareLimitSwitchConfigs m_softLimits{};
+   m_softLimits.WithForwardSoftLimitEnable(false);
+   m_softLimits.WithReverseSoftLimitEnable(false);
+
+   config.SoftwareLimitSwitch = m_softLimits;
+
+   //config.inverted(false);
+   ctre::phoenix6::configs::MotorOutputConfigs m_motorConfigs{};
+   m_motorConfigs.Inverted = false;
+   
+   config.MotorOutput = m_motorConfigs;
+
+//    /* Set limits to how much current will be sent through the motor */
+// #ifdef SAFETY_LIMITS
+//                        // 10 Amps below 5000 RPM, above 5000 RPM it ramps from
+//                        // 10 Amps down to  5 Amps at 5700 RPM
+//    config.SmartCurrentLimit(10, 5, 5000);
+// #else
+//                        // 80 Amps below 5000 RPM, above 5000 RPM it ramps from
+//                        // 80 Amps down to 10 Amps at 5700 RPM
+//                        // We may have to try different CurrentLimits here to
+//                        // eliminate drivetrain chattering.
+//    //m_motor.SetSmartCurrentLimit(80, 10, 5000);
+//    config.SmartCurrentLimit(80, 10, 5000);
+// #endif
+   ctre::phoenix6::configs::CurrentLimitsConfigs m_currentLimits{};
+   m_currentLimits.SupplyCurrentLimit = 80_A; //Set current limit to 80 A
+   m_currentLimits.SupplyCurrentLowerLimit = 40_A; // Reduce the limit to 40 A if we've limited to 70 A...
+   m_currentLimits.SupplyCurrentLowerTime = 1_s; // ...for at least 1 second
+   m_currentLimits.SupplyCurrentLimitEnable = true; // And enable it
+   m_currentLimits.StatorCurrentLimit = 120_A; // Limit stator to 120 A
+   m_currentLimits.StatorCurrentLimitEnable = true; // And enable it
+
+   config.CurrentLimits = m_currentLimits;
+
+   config.limitSwitch.ForwardLimitSwitchType(rev::spark::LimitSwitchConfig::kNormallyOpen)
+                     .ForwardLimitSwitchEnabled(false);
+
+   // Config 100% motor output to 12.0V
+   config.VoltageCompensation(12.0);
+
+   config.VoltageConfigs.VoltageCompSaturation = 12.0; // Set saturation voltage to 12V
+   config.VoltageConfigs.EnableVoltageCompensation = true; // Enable voltage compensation
+
+   // Set ramp rate (how fast motor accelerates or decelerates).
+   // We may have to try different RampRates here to
+   // eliminate drivetrain chattering.
+   //m_motor.SetClosedLoopRampRate(0.1); //0.1
+   //m_motor.SetOpenLoopRampRate(0.1); //0.1
+   config.OpenLoopRampRate(0.1);
+   config.ClosedLoopRampRate(0.1);
+
+   // m_motor.SetIdleMode( rev::CANSparkMax::IdleMode::kCoast );
+   //m_motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+   config.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+
+   //m_motor.Configure(config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+   m_motor.GetConfigurator().Apply(config);
+
+} // MotorInitKraken()
+
 SwerveModule::SwerveModule(const int driveMotorCanID,
                            const int turningMotorCanID,
                            const int turningEncoderSlot,
                            const int turningEncoderOffset)
   : m_driveMotor(driveMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
     m_turningMotor(turningMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
-   m_driveEncoder(m_driveMotor.GetEncoder()),
+   //MM 2/23/25: Old swerve setup, remove once new swerve is working
+   //m_driveEncoder(m_driveMotor.GetEncoder()),
    m_turningEncoder(turningEncoderSlot),
    m_turningEncoderOffset(turningEncoderOffset)
 {
    
-   MotorInitSpark(m_driveMotor);
+   MotorInitKraken(m_driveMotor);
    MotorInitSpark(m_turningMotor);
 
 
@@ -150,6 +224,7 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    // m_driveMotor.OpenLoopRampRate(0.1);
    
 
+   //MM 2/23/25: Unclear how this will work with the new swerve setup
    // Set the distance per pulse for the drive encoder. We can simply use the
    // distance traveled for one rotation of the wheel divided by the encoder
    // resolution.
@@ -169,9 +244,10 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
 
 
 
-
-   std::cout << "Initializing a swerve AnalogInput at "
-                                            << turningEncoderSlot << std::endl;
+   //MM 2/23/25: A lot of this is old prints for the previous swerve setup
+   //            so we can delete it once things are working again
+   //std::cout << "Initializing a swerve AnalogInput at "
+   //                                         << turningEncoderSlot << std::endl;
    //  pm_turningEncoder = new frc::AnalogInput(turningEncoderSlot);
    //  pm_turningEncoder->GetAverageBits();
    //  pm_turningEncoder->GetOversampleBits();
@@ -209,44 +285,60 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
 //                            int turningMotorCanID,
 //                            int turningEncoderAnaID):
 
-// commented out 1/13 MM - doesn't appear to be called anywhere
-//  frc::SwerveModuleState SwerveModule::GetState() const {
-//    return {units::meters_per_second_t{m_driveEncoder.GetRate()},
-//            units::radian_t{m_turningEncoder.GetVoltage()}};
-//  }
-
 frc::SwerveModulePosition SwerveModule::GetPosition() const
 {
-   
-   return {units::meter_t{m_driveEncoder.GetPosition()},
-           units::radian_t{(-((360 *
-                               m_turningEncoder.GetAverageValue() / 4070 +
+   //MM 2/23/25: We will probably have to rewrite this function
+   //            since we are pulling from the encoder on the
+   //            Kraken instead of a NEO
+   return {units::meter_t{m_driveMotor.GetPosition().GetValue()},
+           units::radian_t{(-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
                                m_turningEncoderOffset) % 360)) *
                            std::numbers::pi / 180.0}};
 }
+
+
 
 void SwerveModule::SetDesiredState(
                                   const frc::SwerveModuleState &referenceState,
                                   bool bFreezeDriveMotor )
 {
    // Optimize the reference state to avoid spinning further than 90 degrees
+
+   //MM 2/23/25: m_turningEncoder was being sampled with .GetAverageValue()
+   //            but CANCoder doesn't have that functionality.
+   //            For now, setting to simply "get position", if this is
+   //            not responsive enough then we may need to implement
+   //            our own averaging function.
+   //            TODO: The math here (and the fact that I'm casting it to int)
+   //            might also be issues
+
    const auto state = frc::SwerveModuleState::Optimize(
        referenceState, units::radian_t{
-              (-((360 * m_turningEncoder.GetAverageValue() / 4070 +
+              (-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
                   m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0});
    // TODO: could this range actually be -pi to pi? currently 0 to 2pi,
    // docs just say it wants an angle
 
    // Calculate the drive output from the drive PID controller.
 
+   //MM 2/23/25: This is expecting Velocity as a double
+   // Kraken returns "mechanism rotations per second"
+   // SparkMax returns "RPM" so revolutions per minute - maybe some math needed here
    const auto driveOutput = m_drivePIDController.Calculate(
-       m_driveEncoder.GetVelocity(), state.speed.value());
+       m_driveMotor.GetVelocity().GetValue().value(), state.speed.value());
 
    const auto driveFeedforward = m_driveFeedforward.Calculate(state.speed);
 
    // Calculate the turning motor output from the turning PID controller.
+   //MM 2/23/25: m_turningEncoder was being sampled with .GetAverageValue()
+   //            but CANCoder doesn't have that functionality.
+   //            For now, setting to simply "get position", if this is
+   //            not responsive enough then we may need to implement
+   //            our own averaging function.
+   //            TODO: The math here (and the fact that I'm casting it to int)
+   //            might also be issues
    const auto turnOutput = m_turningPIDController.Calculate(
-       units::radian_t{ (-((360 * m_turningEncoder.GetAverageValue() / 4070 +
+       units::radian_t{ (-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
                                   m_turningEncoderOffset) % 360)) *
                         std::numbers::pi / 180.0 }, state.angle.Radians() );
 

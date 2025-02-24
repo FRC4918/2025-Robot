@@ -281,10 +281,11 @@ frc::SwerveModulePosition SwerveModule::GetPosition()
    //MM 2/23/25: We will probably have to rewrite this function
    //            since we are pulling from the encoder on the
    //            Kraken instead of a NEO
+   
+   //printf("GetPosition meter_t %d: %f\n", m_driveMotor.GetDeviceID(), m_driveMotor.GetPosition().GetValue().value());
+   printf(" GetPosition radian_t %d: %d\n", m_turningMotor.GetDeviceId(), (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset % 360);
    return {units::meter_t{m_driveMotor.GetPosition().GetValue().value()},
-           units::radian_t{(-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
-                               m_turningEncoderOffset) % 360)) *
-                           std::numbers::pi / 180.0}};
+           units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}};
 }
 
 
@@ -303,10 +304,12 @@ void SwerveModule::SetDesiredState(
    //            TODO: The math here (and the fact that I'm casting it to int)
    //            might also be issues
 
+
    const auto state = frc::SwerveModuleState::Optimize(
-       referenceState, units::radian_t{
-              (-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
-                  m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0});
+       referenceState, units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) 
+                                        + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0});
+
+   //printf("Optimized SwerveModuleState %d: %f\n", m_turningMotor.GetDeviceId(), state);
    // TODO: could this range actually be -pi to pi? currently 0 to 2pi,
    // docs just say it wants an angle
 
@@ -328,10 +331,13 @@ void SwerveModule::SetDesiredState(
    //            our own averaging function.
    //            TODO: The math here (and the fact that I'm casting it to int)
    //            might also be issues
-   const auto turnOutput = m_turningPIDController.Calculate(
-       units::radian_t{ (-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
-                                  m_turningEncoderOffset) % 360)) *
-                        std::numbers::pi / 180.0 }, state.angle.Radians() );
+   
+   const auto turnOutput = m_turningPIDController.Calculate( 
+         units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) 
+                         + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}, 
+         state.angle.Radians() );
+                        
+   //printf("turnOutput %d: %f\n", m_turningMotor.GetDeviceId(), turnOutput);
 
    const auto turnFeedforward = m_turnFeedforward.Calculate(
        m_turningPIDController.GetSetpoint().velocity);
@@ -344,10 +350,11 @@ void SwerveModule::SetDesiredState(
    // std::cout << " drive Feed Forward " << driveFeedforward.m_value;
    // std::cout << " turn FF " << turnFeedforward.value() << std::endl;
    //  Set the motor outputs.
-   if ( bFreezeDriveMotor ) {
+   if ( /*bFreezeDriveMotor*/true ) {
       m_driveMotor.SetVoltage(units::volt_t{0.0});
    } else {
       m_driveMotor.SetVoltage(units::volt_t{driveOutput} + driveFeedforward);
    }
+   //printf("TurnFeedForward %d: %f\n", m_turningMotor.GetDeviceId(), turnFeedforward.value());
    m_turningMotor.SetVoltage(units::volt_t{turnOutput} - turnFeedforward);
 }

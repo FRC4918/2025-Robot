@@ -83,10 +83,10 @@ public:
    SwerveModule m_backRight{12, 13, 2, 150};
 #else
    // MM: reseting offsets to 0 for new Swerve tuning
-   SwerveModule m_frontRight{ 1, 2, 11, 0 }; 
-   SwerveModule m_backLeft{   3, 4, 12, 0 }; 
-   SwerveModule m_backRight{  5, 6, 13, 0 };
-   SwerveModule m_frontLeft{  7, 8, 14, 0 }; 
+   SwerveModule m_frontRight{ 1, 2, 11, 354 }; 
+   SwerveModule m_backLeft{   3, 4, 12, 16 }; 
+   SwerveModule m_backRight{  5, 6, 13, 188 };
+   SwerveModule m_frontLeft{  7, 8, 14, 69 }; 
 #endif
 
 private:

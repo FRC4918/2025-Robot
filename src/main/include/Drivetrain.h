@@ -82,12 +82,11 @@ public:
    SwerveModule m_backLeft{14, 15, 3, 24};
    SwerveModule m_backRight{12, 13, 2, 150};
 #else
-       // For the 2023 robot, the swerve modules got re-ordered
-       // (the front-left and front-right modules got swapped):
-   SwerveModule m_frontLeft{  8,  17, 1, 128 }; //294 //314 //304 //124 //122 //126 //128
-   SwerveModule m_frontRight{ 12, 15, 0, 50  }; //60 //58 //62 //54 //52 //51 //50
-   SwerveModule m_backLeft{   14, 9,  3, 71  }; //71 //161 //70 //69 //71
-   SwerveModule m_backRight{  11, 16, 2, 316 }; //319 //317 //315 //317 //316
+   // MM: reseting offsets to 0 for new Swerve tuning
+   SwerveModule m_frontRight{ 1, 2, 11, 0 }; 
+   SwerveModule m_backLeft{   3, 4, 12, 0 }; 
+   SwerveModule m_backRight{  5, 6, 13, 0 };
+   SwerveModule m_frontLeft{  7, 8, 14, 0 }; 
 #endif
 
 private:

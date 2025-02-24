@@ -136,13 +136,13 @@ void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
    ctre::phoenix6::configs::SoftwareLimitSwitchConfigs m_softLimits{};
    m_softLimits.WithForwardSoftLimitEnable(false);
    m_softLimits.WithReverseSoftLimitEnable(false);
-
    config.SoftwareLimitSwitch = m_softLimits;
 
    //config.inverted(false);
+   //config.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
    ctre::phoenix6::configs::MotorOutputConfigs m_motorConfigs{};
-   m_motorConfigs.Inverted = false;
-   
+   m_motorConfigs.Inverted = 1;//0 is counterclockwise positive, 1 is clockwise positive
+   m_motorConfigs.NeutralMode = 1; //0 = Coast, 1 = Brake
    config.MotorOutput = m_motorConfigs;
 
 //    /* Set limits to how much current will be sent through the motor */
@@ -160,34 +160,35 @@ void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
 // #endif
    ctre::phoenix6::configs::CurrentLimitsConfigs m_currentLimits{};
    m_currentLimits.SupplyCurrentLimit = 80_A; //Set current limit to 80 A
-   m_currentLimits.SupplyCurrentLowerLimit = 40_A; // Reduce the limit to 40 A if we've limited to 70 A...
+   m_currentLimits.SupplyCurrentLowerLimit = 40_A; // Reduce the limit to 40 A if we've limited to 80 A...
    m_currentLimits.SupplyCurrentLowerTime = 1_s; // ...for at least 1 second
    m_currentLimits.SupplyCurrentLimitEnable = true; // And enable it
    m_currentLimits.StatorCurrentLimit = 120_A; // Limit stator to 120 A
    m_currentLimits.StatorCurrentLimitEnable = true; // And enable it
-
    config.CurrentLimits = m_currentLimits;
 
-   config.limitSwitch.ForwardLimitSwitchType(rev::spark::LimitSwitchConfig::kNormallyOpen)
-                     .ForwardLimitSwitchEnabled(false);
+   //config.limitSwitch.ForwardLimitSwitchType(rev::spark::LimitSwitchConfig::kNormallyOpen)
+   //                  .ForwardLimitSwitchEnabled(false);
+   ctre::phoenix6::configs::SoftwareLimitSwitchConfigs m_limitSwitch{};
+   m_limitSwitch.WithForwardSoftLimitEnable(false);
+   m_limitSwitch.WithReverseSoftLimitEnable(false);
+   config.SoftwareLimitSwitch = m_limitSwitch;
 
    // Config 100% motor output to 12.0V
-   config.VoltageCompensation(12.0);
-
-   config.VoltageConfigs.VoltageCompSaturation = 12.0; // Set saturation voltage to 12V
-   config.VoltageConfigs.EnableVoltageCompensation = true; // Enable voltage compensation
+   //config.VoltageCompensation(12.0);
+   //MM 2/23/25: Kraken doesn't have voltage compensation?
 
    // Set ramp rate (how fast motor accelerates or decelerates).
    // We may have to try different RampRates here to
    // eliminate drivetrain chattering.
-   //m_motor.SetClosedLoopRampRate(0.1); //0.1
-   //m_motor.SetOpenLoopRampRate(0.1); //0.1
-   config.OpenLoopRampRate(0.1);
-   config.ClosedLoopRampRate(0.1);
-
-   // m_motor.SetIdleMode( rev::CANSparkMax::IdleMode::kCoast );
-   //m_motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-   config.SetIdleMode(rev::spark::SparkBaseConfig::IdleMode::kBrake);
+   //config.OpenLoopRampRate(0.1);
+   //config.ClosedLoopRampRate(0.1);
+   ctre::phoenix6::configs::OpenLoopRampsConfigs m_openLoopRamp{};
+   m_openLoopRamp.DutyCycleOpenLoopRampPeriod = 0.1_s;
+   config.OpenLoopRamps = m_openLoopRamp;
+   ctre::phoenix6::configs::ClosedLoopRampsConfigs m_closedLoopRamp{};
+   m_closedLoopRamp.DutyCycleClosedLoopRampPeriod = 0.1_s;
+   config.ClosedLoopRamps = m_closedLoopRamp;
 
    //m_motor.Configure(config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
    m_motor.GetConfigurator().Apply(config);
@@ -196,28 +197,18 @@ void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
 
 SwerveModule::SwerveModule(const int driveMotorCanID,
                            const int turningMotorCanID,
-                           const int turningEncoderSlot,
+                           const int turningEncoderCanID,
                            const int turningEncoderOffset)
-  : m_driveMotor(driveMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
+  : m_driveMotor(driveMotorCanID, "rio"),
     m_turningMotor(turningMotorCanID, rev::spark::SparkMax::MotorType::kBrushless),
    //MM 2/23/25: Old swerve setup, remove once new swerve is working
    //m_driveEncoder(m_driveMotor.GetEncoder()),
-   m_turningEncoder(turningEncoderSlot),
+   m_turningEncoder(turningEncoderCanID),
    m_turningEncoderOffset(turningEncoderOffset)
 {
    
    MotorInitKraken(m_driveMotor);
    MotorInitSpark(m_turningMotor);
-
-
-   // Initialize both CAN Spark-driven NEO motors.
-   SparkMaxConfig drive_config{};
-   SparkMaxConfig turn_config{};
-   
-   turn_config.SmartCurrentLimit(10, 5, 5000);
-   drive_config.ClosedLoopRampRate(0.1);
-   drive_config.OpenLoopRampRate(0.1);
-
 
    // m_turningMotor.SetSmartCurrentLimit(10, 5, 5000);
    // m_driveMotor.ClosedLoopRampRate(0.1);
@@ -225,22 +216,22 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
    
 
    //MM 2/23/25: Unclear how this will work with the new swerve setup
+   //            or if it is even needed
    // Set the distance per pulse for the drive encoder. We can simply use the
    // distance traveled for one rotation of the wheel divided by the encoder
    // resolution.
    // m_driveEncoder.SetDistancePerPulse(2 * std::numbers::pi * kWheelRadius /
    //                                   kEncoderResolution);
-   //m_driveEncoder.SetPositionConversionFactor(1.0 / 26.17 );
-   drive_config.encoder.PositionConversionFactor(1.0 / 26.17);
+   //drive_config.encoder.PositionConversionFactor(1.0 / 26.17);
    // We had a value of 1.0/39.0 above, and the robot then measured
    // 4.09 meters when it actually drove 20 feet (6.096 meters),
    // so adjust the new divisor: (39.0 * 4.09/6.096) = 26.17
-   //m_driveEncoder.SetVelocityConversionFactor(1.0 / 2340.0);
-   drive_config.encoder.VelocityConversionFactor(1.0 / 2340.0);
+   //drive_config.encoder.VelocityConversionFactor(1.0 / 2340.0);
 
+   //MM: We already configure these motors and don't need to modify them further currently
    //configure motors
-   m_driveMotor.Configure(drive_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
-   m_turningMotor.Configure(turn_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+   //m_driveMotor.Configure(drive_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+   //m_turningMotor.Configure(turn_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
 
 
 
@@ -285,12 +276,12 @@ SwerveModule::SwerveModule(const int driveMotorCanID,
 //                            int turningMotorCanID,
 //                            int turningEncoderAnaID):
 
-frc::SwerveModulePosition SwerveModule::GetPosition() const
+frc::SwerveModulePosition SwerveModule::GetPosition()
 {
    //MM 2/23/25: We will probably have to rewrite this function
    //            since we are pulling from the encoder on the
    //            Kraken instead of a NEO
-   return {units::meter_t{m_driveMotor.GetPosition().GetValue()},
+   return {units::meter_t{m_driveMotor.GetPosition().GetValue().value()},
            units::radian_t{(-((360 * (int)m_turningEncoder.GetPosition().GetValue().value() / 4070 +
                                m_turningEncoderOffset) % 360)) *
                            std::numbers::pi / 180.0}};

@@ -49,10 +49,10 @@ class Robot : public frc::TimedRobot {
   // Motors and robot vars
 
   // Elevator and sideshift
-  rev::spark::SparkMax m_LeftElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
-  rev::spark::SparkMax m_RightElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
-  rev::spark::SparkMax m_LeftSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
-  rev::spark::SparkMax m_RightSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
+  // rev::spark::SparkMax m_LeftElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
+  // rev::spark::SparkMax m_RightElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
+  // rev::spark::SparkMax m_LeftSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
+  // rev::spark::SparkMax m_RightSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
   
 
 
@@ -73,7 +73,7 @@ frc::Joystick m_Console{3};
       
       //frc::SmartDashboard::PutString("Holding Note", noteInShooter);
       
-      ElevatorMotorInitSpark(m_LeftElevatorMotor);
+      //ElevatorMotorInitSpark(m_LeftElevatorMotor);
 
       // We need to run our vision program in a separate thread.
       // If not run separately (in parallel), our robot program will never

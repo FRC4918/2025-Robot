@@ -39,7 +39,7 @@ public:
                 int turningEncoderCanID,
                 int turningEncoderOffset);
 
-   frc::SwerveModulePosition GetPosition() const;
+   frc::SwerveModulePosition GetPosition();
    void SetDesiredState( const frc::SwerveModuleState &state, bool bFreezeDriveMotor = false );
 
 private:

@@ -70,7 +70,7 @@ private:
        // 0.0,
        // 0.001,
        // Values above are good for all 4 swerve module turn motors
-       1.0, //previously 8.0 on old swerve
+       5.0, //previously 8.0 on old swerve
        0.0,
        0.0, //previously .001 on old swerve
        {kModuleMaxAngularVelocity, kModuleMaxAngularAcceleration}};

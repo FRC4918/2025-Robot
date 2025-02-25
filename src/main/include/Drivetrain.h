@@ -71,8 +71,8 @@ private:
        // of those values is: 0.324 meters and 0.248 meters.
    frc::Translation2d m_frontLeftLocation{ +0.324_m, +0.248_m};
    frc::Translation2d m_frontRightLocation{+0.324_m, -0.248_m};
-   frc::Translation2d m_backLeftLocation{  -0.324_m, +0.248_m};
    frc::Translation2d m_backRightLocation{ -0.324_m, -0.248_m};
+   frc::Translation2d m_backLeftLocation{  -0.324_m, +0.248_m};
 #endif
 
 public:
@@ -82,11 +82,11 @@ public:
    SwerveModule m_backLeft{14, 15, 3, 24};
    SwerveModule m_backRight{12, 13, 2, 150};
 #else
-   // MM: reseting offsets to 0 for new Swerve tuning
-   SwerveModule m_frontRight{ 1, 2, 11, 354 }; 
-   SwerveModule m_backLeft{   3, 4, 12, 16 }; 
-   SwerveModule m_backRight{  5, 6, 13, 188 };
-   SwerveModule m_frontLeft{  7, 8, 14, 69 }; 
+   //less setpoint moves motor to the left
+   SwerveModule m_frontRight{ 1, 2, 11, 354 };
+   SwerveModule m_backRight{  3, 4, 12, 196 };
+   SwerveModule m_backLeft{   5, 6, 13, 187 };
+   SwerveModule m_frontLeft{  7, 8, 14, 247 };
 #endif
 
 private:

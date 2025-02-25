@@ -350,7 +350,7 @@ void SwerveModule::SetDesiredState(
    // std::cout << " drive Feed Forward " << driveFeedforward.m_value;
    // std::cout << " turn FF " << turnFeedforward.value() << std::endl;
    //  Set the motor outputs.
-   if ( /*bFreezeDriveMotor*/true ) {
+   if ( bFreezeDriveMotor ) {
       m_driveMotor.SetVoltage(units::volt_t{0.0});
    } else {
       m_driveMotor.SetVoltage(units::volt_t{driveOutput} + driveFeedforward);

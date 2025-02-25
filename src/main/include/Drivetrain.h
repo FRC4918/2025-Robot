@@ -83,9 +83,9 @@ public:
    SwerveModule m_backRight{12, 13, 2, 150};
 #else
    //less setpoint moves motor to the left
-   SwerveModule m_frontRight{ 1, 2, 11, 354 };
+   SwerveModule m_frontRight{ 1, 2, 11, 174 };
    SwerveModule m_backRight{  3, 4, 12, 196 };
-   SwerveModule m_backLeft{   5, 6, 13, 187 };
+   SwerveModule m_backLeft{   5, 6, 13,   7 };
    SwerveModule m_frontLeft{  7, 8, 14, 247 };
 #endif
 

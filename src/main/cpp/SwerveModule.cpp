@@ -110,6 +110,7 @@ void MotorInitSpark(SparkMax &m_motor)
    //m_motor.SetOpenLoopRampRate(0.1); //0.1
    config.OpenLoopRampRate(0.1);
    config.ClosedLoopRampRate(0.1);
+   
 
    // m_motor.SetIdleMode( rev::CANSparkMax::IdleMode::kCoast );
    //m_motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
@@ -283,7 +284,7 @@ frc::SwerveModulePosition SwerveModule::GetPosition()
    //            Kraken instead of a NEO
    
    //printf("GetPosition meter_t %d: %f\n", m_driveMotor.GetDeviceID(), m_driveMotor.GetPosition().GetValue().value());
-   printf(" GetPosition radian_t %d: %d\n", m_turningMotor.GetDeviceId(), (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset % 360);
+   //printf(" GetPosition radian_t %d: %d\n", m_turningMotor.GetDeviceId(), (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset % 360);
    return {units::meter_t{m_driveMotor.GetPosition().GetValue().value()},
            units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}};
 }

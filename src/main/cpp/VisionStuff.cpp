@@ -30,6 +30,11 @@ void VisionThread() {
   // look for tag36h11, correct 3 error bits
     detector.AddFamily("tag36h11", 0);
 
+    frc::AprilTagDetector::Config detectorConfig;
+    detectorConfig.debug = true;
+    detectorConfig.quadDecimate = 0.9;
+    detector.SetConfig(detectorConfig);
+
     // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
     // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
     frc::AprilTagPoseEstimator::Config poseEstConfig = {

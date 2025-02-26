@@ -18,7 +18,7 @@
 #include <networktables/IntegerArrayTopic.h>
 #include <networktables/NetworkTable.h>
 #include <networktables/NetworkTableInstance.h>
-
+#include <rev/config/SparkMaxConfig.h>
 
 
 
@@ -49,12 +49,15 @@ class Robot : public frc::TimedRobot {
   // Motors and robot vars
 
   // Elevator and sideshift
-  // rev::spark::SparkMax m_LeftElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
-  // rev::spark::SparkMax m_RightElevatorMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
+  rev::spark::SparkMax m_MasterElevatorMotor{ 9, rev::spark::SparkMax::MotorType::kBrushless };
+  rev::spark::SparkMax m_SlaveElevatorMotor{ 10, rev::spark::SparkMax::MotorType::kBrushless };
   // rev::spark::SparkMax m_LeftSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
   // rev::spark::SparkMax m_RightSideshiftMotor{ 99999, rev::spark::SparkMax::MotorType::kBrushless };
-  
+  SparkClosedLoopController m_ElevatorController = m_MasterElevatorMotor.GetClosedLoopController();
 
+
+  //Coral motor
+  WPI_VictorSPX m_CoralMotor{15};
 
 
 
@@ -72,8 +75,31 @@ frc::Joystick m_Console{3};
       //frc::SmartDashboard::PutBoolean("Holding Note", noteInShooter);
       
       //frc::SmartDashboard::PutString("Holding Note", noteInShooter);
+
+      ElevatorMotorInitSpark(m_MasterElevatorMotor);
+      ElevatorMotorInitSpark(m_SlaveElevatorMotor);
       
-      //ElevatorMotorInitSpark(m_LeftElevatorMotor);
+      rev::spark::SparkMaxConfig elevator_slave_config;
+      elevator_slave_config.Follow(m_MasterElevatorMotor, true);
+      m_SlaveElevatorMotor.Configure(elevator_slave_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+
+      rev::spark::SparkMaxConfig elevator_master_config;
+      elevator_master_config.closedLoop
+        .P(1.0)
+        .I(0.0)
+        .D(0.0)
+        .OutputRange(-1.0, 1.0);
+
+      elevator_master_config.closedLoop.maxMotion
+        .MaxVelocity(6000.0)
+        .MaxAcceleration(6000.0)
+        .AllowedClosedLoopError(5.0);
+        
+      m_MasterElevatorMotor.Configure(elevator_master_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+
+      
+      MotorInitVictor(m_CoralMotor);
+
 
       // We need to run our vision program in a separate thread.
       // If not run separately (in parallel), our robot program will never
@@ -85,6 +111,7 @@ frc::Joystick m_Console{3};
 
     void AutonomousInit() override {
         //auto code goes here
+        
     }
 
     void TeleopInit() override {
@@ -148,6 +175,17 @@ frc::Joystick m_Console{3};
 
       auto atData = GetATagVariables();
       
+
+
+      std::cout << "BL" << m_swerve.m_backLeft.GetPosition().angle.Degrees().value()
+                << " BR" << m_swerve.m_backRight.GetPosition().angle.Degrees().value()
+                << " FL" << m_swerve.m_frontLeft.GetPosition().angle.Degrees().value()
+                << " FR" << m_swerve.m_frontRight.GetPosition().angle.Degrees().value()
+                << std::endl;
+
+
+
+
 
 
     // Relative Switch (A)
@@ -221,16 +259,22 @@ frc::Joystick m_Console{3};
       // Adjust sideshift + elevator
       
       // Elevator
+      //std::cout << m_operatorController.GetPOV() << std::endl;
+      
       switch (m_operatorController.GetPOV()) {
         case 0: { // up
           std::cout << "Elevator up" << std::endl;
+          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
+          //m_MasterElevatorMotors
           break;
         }
         case 45: {
+          //std::cout << m_MasterElevatorMotor.GetAbsoluteEncoder().GetPosition() << std::endl;
           break;
         }
         case 90: { // right
-          std::cout << "Sideshift right" << std::endl;
+          std::cout << "Elelator 3" << std::endl;
+          m_ElevatorController.SetReference(100.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           break;
         }
         case 135: {
@@ -238,13 +282,15 @@ frc::Joystick m_Console{3};
         }
         case 180: { // down
           std::cout << "Elevator down" << std::endl;
+          m_ElevatorController.SetReference(0.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           break;
         }
         case 225: {
           break;
         }
         case 270: { // left
-          std::cout << "Sideshift left" << std::endl;
+          std::cout << "elevator 2" << std::endl;
+          m_ElevatorController.SetReference(50.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           break;
         }
         case 315: {
@@ -256,6 +302,26 @@ frc::Joystick m_Console{3};
           break;
         }
       }
+
+
+      // Coral Motor
+      if (m_operatorController.GetBButton()) {
+        //m_CoralMotor.SetVoltage((units::volt_t) 12.0);
+        m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+      } else {
+        m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+      }
+
+      // if (m_operatorController.GetAButton()) {
+      //   m_MasterElevatorMotor.SetVoltage(units::volt_t{6.0});
+      // } else {
+      //   m_MasterElevatorMotor.SetVoltage(units::volt_t{0.0});
+      // }
+
+      if (m_operatorController.GetYButton()) {
+        // m_ElevatorController.SetIAccum()
+      }
+
     }
 
 

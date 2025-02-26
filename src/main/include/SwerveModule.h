@@ -75,7 +75,7 @@ private:
        0.0, //previously .001 on old swerve
        {kModuleMaxAngularVelocity, kModuleMaxAngularAcceleration}};
                                                                     // was 1.0
-   frc::SimpleMotorFeedforward<units::meters> m_driveFeedforward{0.1_V, 1_V / 1_mps};
+   frc::SimpleMotorFeedforward<units::meters> m_driveFeedforward{4.0_V, 1_V / 1_mps};
    frc::SimpleMotorFeedforward<units::radians> m_turnFeedforward{0.1_V /*was 0.1*/, 0.025_V /* was 0.025*/ / 1_rad_per_s};
 };
 // originally .5_V on line 72 made 0.025_V and 3_V on line 70 made 1_V

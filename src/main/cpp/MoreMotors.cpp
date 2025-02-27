@@ -2,6 +2,7 @@
 
 #include <rev/SparkMax.h>
 #include <rev/config/SparkMaxConfig.h>
+#include <ctre/Phoenix.h>
 
 using namespace rev::spark;
 
@@ -53,3 +54,35 @@ void ElevatorMotorInitSpark(SparkMax &m_motor)
     m_motor.Configure(config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
 
 } // MotorInitSpark()
+
+
+void MotorInitVictor( WPI_VictorSPX &m_motor )
+  {
+    m_motor.ConfigFactoryDefault( 10 );
+    m_motor.SetInverted( false );
+                                             /* Set the peak and nominal outputs */
+    m_motor.ConfigNominalOutputForward( 0, 10 );
+    m_motor.ConfigNominalOutputReverse( 0, 10 );
+    m_motor.ConfigPeakOutputForward(    1, 10 );
+    m_motor.ConfigPeakOutputReverse(   -1, 10 );
+
+            /* Set limits to how much current will be sent through the motor */
+    //m_motor.ConfigPeakCurrentDuration(1);  // 1000 milliseconds (for 60 Amps)
+#ifdef SAFETY_LIMITS
+  //m_motor.ConfigPeakCurrentLimit(10);       // limit motor power severely
+  //m_motor.ConfigContinuousCurrentLimit(10); // to 10 Amps
+#else
+    //m_motor.ConfigPeakCurrentLimit(60);          // 60 works here for miniCIMs,
+                                                 // or maybe 40 Amps is enough,
+                                                 // but we reduce to 10, 1, 10
+    //m_motor.ConfigContinuousCurrentLimit(60);    // for safety while debugging
+#endif
+    //m_motor.EnableCurrentLimit(true);
+
+                                          // Config 100% motor output to 12.0V
+    m_motor.ConfigVoltageCompSaturation( 12.0 );
+    m_motor.EnableVoltageCompensation( false );
+
+    m_motor.SetNeutralMode( NeutralMode::Brake );
+
+  }      // MotorInitVictor()

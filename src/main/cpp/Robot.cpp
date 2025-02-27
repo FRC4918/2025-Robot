@@ -20,6 +20,8 @@
 #include <networktables/NetworkTableInstance.h>
 #include <rev/config/SparkMaxConfig.h>
 
+#include <choreo/Choreo.h>
+
 
 
 // #include <frc/Encoder.h>
@@ -42,6 +44,15 @@ static double atPreviousError;
 static double atIntegral;
 
 
+// for auto and choreo stuff
+frc::PIDController xController{5.0, 0.0, 0.0};//10
+frc::PIDController yController{5.0, 0.0, 0.0};//10
+frc::PIDController headingController{3.4, 0.0, 0.0};//7.5
+
+frc::Timer timer;
+
+//trajectories
+auto traj_frfr = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("test1");
 
 
 class Robot : public frc::TimedRobot {
@@ -110,8 +121,51 @@ frc::Joystick m_Console{3};
     }
 
     void AutonomousInit() override {
-        //auto code goes here
+      headingController.EnableContinuousInput(-M_PI, M_PI);
+
+      //auto code goes here
+      if (traj_frfr.has_value()) {
+        // Get the initial pose of the trajectory
+        if (auto initialPose = traj_frfr.value().GetInitialPose(IsRedAlliance())) {
+          // Reset odometry to the start of the trajectory
+          m_swerve.ResetPose(initialPose.value());
+        }
+      }
+
+      // Reset and start the timer when the autonomous period begins
+      timer.Restart();
+      //timer.Stop //timer affects 
+    }
+
+    void AutonomousPeriodic() override {
+      
+      if (traj_frfr.has_value()) {
+        // Sample the trajectory at the current time into the autonomous period
+        if (auto sample = traj_frfr.value().SampleAt(timer.Get(), IsRedAlliance())) {
+            FollowTrajectory(sample.value());
+        }
         
+        int splits = sizeof(traj_frfr.value().splits)/sizeof(int);
+        // int is 4 bytes
+
+        frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
+        
+
+        static int last_timer = 0;
+        if (last_timer != timer.Get().value()) {
+          std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
+        } 
+        last_timer = timer.Get().value();
+
+      }
+      m_swerve.UpdateOdometry();
+    }
+
+    void TestInit() override {
+
+    }
+    void TestPeriodic() override {
+      
     }
 
     void TeleopInit() override {
@@ -124,6 +178,13 @@ frc::Joystick m_Console{3};
       // double rightDistance = rightEncoder.GetDistance();
       // std::cout << "Left Encoder Distance: " << leftDistance << std::endl;
       // std::cout << "Right Encoder Distance: " << rightDistance << std::endl;
+
+      frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
+        
+
+      std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
+
+
 
       DriverControls(true);
       OperatorControls();
@@ -397,7 +458,39 @@ frc::Joystick m_Console{3};
 
 
   
+    bool IsRedAlliance() {
+      auto alliance = frc::DriverStation::GetAlliance().value_or(frc::DriverStation::kBlue);
+      return alliance == frc::DriverStation::kRed;
+    }
 
+
+
+  // AUTONOMOUS
+
+
+
+    void FollowTrajectory(const choreo::SwerveSample& sample) {
+        // Get the current pose of the robot
+        frc::Pose2d pose = m_swerve.m_poseEstimator.GetEstimatedPosition();
+
+
+        // Calculate feedback velocities
+        units::meters_per_second_t xFeedback{xController.Calculate(pose.X().value(), sample.x.value())};
+        units::meters_per_second_t yFeedback{yController.Calculate(pose.Y().value(), sample.y.value())};
+        units::radians_per_second_t headingFeedback{
+            headingController.Calculate(pose.Rotation().Radians().value(), sample.heading.value())
+        };
+
+        // Generate the next speeds for the robot
+        frc::ChassisSpeeds speeds{
+            sample.vx + xFeedback,
+            sample.vy + yFeedback,
+            sample.omega + headingFeedback
+        };
+
+        // Apply the generated speeds
+        m_swerve.Drive(speeds.vx, speeds.vy, speeds.omega, true);
+    };
 
 
 

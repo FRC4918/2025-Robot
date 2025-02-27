@@ -285,8 +285,8 @@ frc::SwerveModulePosition SwerveModule::GetPosition()
    
    //printf("GetPosition meter_t %d: %f\n", m_driveMotor.GetDeviceID(), m_driveMotor.GetPosition().GetValue().value());
    //printf(" GetPosition radian_t %d: %d\n", m_turningMotor.GetDeviceId(), (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset % 360);
-   return {units::meter_t{m_driveMotor.GetPosition().GetValue().value()},
-           units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}};
+   return {units::meter_t{m_driveMotor.GetPosition().GetValue().value() / 25.924},
+           units::radian_t{((( (int)(360.0 * m_turningEncoder.GetAbsolutePosition().GetValue().value()) + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}};
 }
 
 
@@ -307,7 +307,7 @@ void SwerveModule::SetDesiredState(
 
 
    const auto state = frc::SwerveModuleState::Optimize(
-       referenceState, units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) 
+       referenceState, units::radian_t{((( (int)(360.0 * m_turningEncoder.GetAbsolutePosition().GetValue().value()) 
                                         + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0});
 
    //printf("Optimized SwerveModuleState %d: %f\n", m_turningMotor.GetDeviceId(), state);
@@ -334,7 +334,7 @@ void SwerveModule::SetDesiredState(
    //            might also be issues
    
    const auto turnOutput = m_turningPIDController.Calculate( 
-         units::radian_t{((( (int)(360.0 * m_turningEncoder.GetPosition().GetValue().value()) 
+         units::radian_t{((( (int)(360.0 * m_turningEncoder.GetAbsolutePosition().GetValue().value()) 
                          + m_turningEncoderOffset) % 360)) * std::numbers::pi / 180.0}, 
          state.angle.Radians() );
                         

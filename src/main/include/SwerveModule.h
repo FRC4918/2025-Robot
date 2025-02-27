@@ -61,9 +61,9 @@ private:
    int m_turningEncoderOffset;
 
    frc::PIDController m_drivePIDController{
-       0.1, //previously 1.0 on old swerve
+       0.075, //previously 1.0 on old swerve
        0.0,
-       0.0};
+       0.0001};
 
    frc::ProfiledPIDController<units::radians> m_turningPIDController{
        // 8.0,  //[Something] too violent, 5 too slow
@@ -72,7 +72,7 @@ private:
        // Values above are good for all 4 swerve module turn motors
        5.0, //previously 8.0 on old swerve
        0.0,
-       0.0, //previously .001 on old swerve
+       0.001, //previously .001 on old swerve
        {kModuleMaxAngularVelocity, kModuleMaxAngularAcceleration}};
                                                                     // was 1.0
    frc::SimpleMotorFeedforward<units::meters> m_driveFeedforward{4.0_V, 1_V / 1_mps};

@@ -64,7 +64,7 @@ private:
    frc::Translation2d m_backLeftLocation{-0.26_m, +0.26_m};
    frc::Translation2d m_backRightLocation{-0.26_m, -0.26_m};
 #else
-       // For the 2023 robot:
+       // For the 2025 robot:
        // The fore-and-aft length between turning swerve axles is 25.5"
        // and the side-to-side width between turning swerve axles is 19.5"
        // In metric, those are 0.647 meters and 0.495 meters, and half
@@ -83,10 +83,10 @@ public:
    SwerveModule m_backRight{12, 13, 2, 150};
 #else
    //less setpoint moves motor to the left
-   SwerveModule m_frontRight{ 1, 2, 11, 174 };
+   SwerveModule m_frontRight{ 1, 2, 14, 174 };
    SwerveModule m_backRight{  3, 4, 12, 196 };
    SwerveModule m_backLeft{   5, 6, 13,   7 };
-   SwerveModule m_frontLeft{  7, 8, 14, 247 };
+   SwerveModule m_frontLeft{  7, 8, 11, 247 };
 #endif
 
 private:

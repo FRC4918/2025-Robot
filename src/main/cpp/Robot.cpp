@@ -45,9 +45,9 @@ static double atIntegral;
 
 
 // for auto and choreo stuff
-frc::PIDController xController{5.0, 0.0, 0.0};//10
-frc::PIDController yController{5.0, 0.0, 0.0};//10
-frc::PIDController headingController{3.4, 0.0, 0.0};//7.5
+frc::PIDController xController{20.0, 0.0, 0.0};//10//1
+frc::PIDController yController{20.0, 0.0, 0.0};//10//1
+frc::PIDController headingController{20.0, 0.0, 0.0};//7.5//1
 
 frc::Timer timer;
 
@@ -90,6 +90,10 @@ frc::Joystick m_Console{3};
       ElevatorMotorInitSpark(m_MasterElevatorMotor);
       ElevatorMotorInitSpark(m_SlaveElevatorMotor);
       
+      // xController.SetTolerance(10.0);
+      // yController.SetTolerance(10.0);
+      // headingController.SetTolerance(10.0);
+
       rev::spark::SparkMaxConfig elevator_slave_config;
       elevator_slave_config.Follow(m_MasterElevatorMotor, true);
       m_SlaveElevatorMotor.Configure(elevator_slave_config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
@@ -121,13 +125,15 @@ frc::Joystick m_Console{3};
     }
 
     void AutonomousInit() override {
+
       headingController.EnableContinuousInput(-M_PI, M_PI);
 
       //auto code goes here
       if (traj_frfr.has_value()) {
         // Get the initial pose of the trajectory
-        if (auto initialPose = traj_frfr.value().GetInitialPose(IsRedAlliance())) {
+        if (auto initialPose = traj_frfr.GetInitialPose(IsRedAlliance())) {
           // Reset odometry to the start of the trajectory
+          std::cout << "Resetting Gyro" << std::endl;
           m_swerve.ResetPose(initialPose.value());
         }
       }
@@ -143,6 +149,8 @@ frc::Joystick m_Console{3};
         // Sample the trajectory at the current time into the autonomous period
         if (auto sample = traj_frfr.value().SampleAt(timer.Get(), IsRedAlliance())) {
             FollowTrajectory(sample.value());
+        } else {
+          std::cout << "No more samples!" << std::endl;
         }
         
         int splits = sizeof(traj_frfr.value().splits)/sizeof(int);
@@ -476,19 +484,30 @@ frc::Joystick m_Console{3};
 
         // Calculate feedback velocities
         units::meters_per_second_t xFeedback{xController.Calculate(pose.X().value(), sample.x.value())};
+        std::cout << "X position is " << pose.X().value() << " and sample position is " << sample.x.value() << " so feedforward is " << xFeedback.value();
         units::meters_per_second_t yFeedback{yController.Calculate(pose.Y().value(), sample.y.value())};
         units::radians_per_second_t headingFeedback{
             headingController.Calculate(pose.Rotation().Radians().value(), sample.heading.value())
         };
-
+        std::cout << " Sample vx is " << sample.vx.value();
         // Generate the next speeds for the robot
         frc::ChassisSpeeds speeds{
             sample.vx + xFeedback,
             sample.vy + yFeedback,
             sample.omega + headingFeedback
         };
-
+        
+        if (abs( speeds.vx.value() )  < 0.001) {
+            speeds.vx = (units::meters_per_second_t) 0.0;
+        }
+        if (abs( speeds.vy.value() )  < 0.001) {
+            speeds.vy = (units::meters_per_second_t)0.0;
+        }
+        if (abs( speeds.omega.value() )  < 0.001) {
+            speeds.omega = (units::radians_per_second_t)0.0;
+        }
         // Apply the generated speeds
+        std::cout << " New speed is " << speeds.vx.value() << std::endl;
         m_swerve.Drive(speeds.vx, speeds.vy, speeds.omega, true);
     };
 

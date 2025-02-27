@@ -248,6 +248,7 @@ void Drivetrain::Reset()
 
 void Drivetrain::ResetPose(frc::Pose2d startPose) 
 {
+   std::cout << "Start Pose X: " << startPose.X().value() << " Y: " << startPose.Y().value() << std::endl;
    m_gyro.Reset();
    usleep( 10000 );                                     // wait 10 milliseconds
    initialPose = startPose;
@@ -257,7 +258,7 @@ void Drivetrain::ResetPose(frc::Pose2d startPose)
                      {m_frontLeft.GetPosition(), m_frontRight.GetPosition(),
                       m_backLeft.GetPosition(),  m_backRight.GetPosition()  },
                                                          startPose );  // rotation 
-
+   std::cout << "Position is now X: " << m_poseEstimator.GetEstimatedPosition().X().value() << " Y: " << m_poseEstimator.GetEstimatedPosition().Y().value() << std::endl;
 }
 
 void Drivetrain::UpdateOdometry()

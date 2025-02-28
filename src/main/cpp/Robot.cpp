@@ -248,10 +248,10 @@ class Robot : public frc::TimedRobot {
             std::cout << "No more samples!" << std::endl;
           }
           
-          int splits_count = sizeof(auto_traj.value().splits)/sizeof(int);
+          //int splits_count = sizeof(auto_traj.value().splits)/sizeof(int);
           // int is 4 bytes
 
-          frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
+          //frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
           
 
           static int last_timer = 0;
@@ -416,7 +416,7 @@ class Robot : public frc::TimedRobot {
     }
 
     // Look To April Tag (Left Bumper)
-    if (m_driverController.GetLeftBumper()) {
+    if (m_driverController.GetLeftBumperButton()) {
       rot = -atData.radsToTurn*10;
       fieldRelative = true;
       // std::cout << (double) faceAprilTag
@@ -431,7 +431,7 @@ class Robot : public frc::TimedRobot {
     }
 
     // Held bumper. Hunt and pounce (predator alignment) April Tag (Right Bumper)
-    if (m_driverController.GetRightBumper()) {
+    if (m_driverController.GetRightBumperButton()) {
 
 
       if (std::abs(atData.headOnOffsetDeg) > 0.05) {
@@ -463,14 +463,7 @@ class Robot : public frc::TimedRobot {
     } //End DriveControls
 
     void OperatorControls() {
-      // Adjust sideshift + elevator
-      
-      // Elevator
-      //std::cout << m_operatorController.GetPOV() << std::endl;
-
-      if (m_operatorController.GetXButton()) {
-        
-      }
+      // Adjust elevator
       
       switch (m_operatorController.GetPOV()) {
         case 0: { // up
@@ -521,16 +514,6 @@ class Robot : public frc::TimedRobot {
         m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
       } else {
         m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
-      }
-
-      // if (m_operatorController.GetAButton()) {
-      //   m_MasterElevatorMotor.SetVoltage(units::volt_t{6.0});
-      // } else {
-      //   m_MasterElevatorMotor.SetVoltage(units::volt_t{0.0});
-      // }
-
-      if (m_operatorController.GetYButton()) {
-        // m_ElevatorController.SetIAccum()
       }
 
     }

@@ -27,6 +27,15 @@
 // #include <frc/Encoder.h>
 // #include <frc/smartdashboard/SmartDashboard.h>
 
+//DriverStation vars
+#define SWITCH_1 12
+#define SWITCH_2 9
+#define SWITCH_3 10
+#define SWITCH_4 11
+
+
+
+
 //Robot Pos Variables
 //static units::angle::degree_t gyroYawHeading; //robot yaw (degrees)
 static units::angular_velocity::degrees_per_second_t gyroYawRate; //robot rotate rate (degrees/second)
@@ -50,10 +59,11 @@ frc::PIDController yController{20.0, 0.0, 0.0};//10//1
 frc::PIDController headingController{20.0, 0.0, 0.0};//7.5//1
 
 frc::Timer timer;
+frc::Timer splitTimer;
 
-//trajectories
-auto traj_frfr = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("test1");
 
+
+std::optional<choreo::Trajectory<choreo::SwerveSample>> auto_traj;
 
 class Robot : public frc::TimedRobot {
   
@@ -70,17 +80,26 @@ class Robot : public frc::TimedRobot {
   //Coral motor
   WPI_VictorSPX m_CoralMotor{15};
 
+  //JOYSTICKint
+  frc::Joystick m_Console{3};
 
+  //trajectories
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_frfr = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("frfr_no_proc");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_frfr_proc = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("frfr_proc");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_aggro = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("aggressive_no_proc");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_aggro_proc = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("aggressive_proc");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help_premium = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
 
-//JOYSTICKint
-frc::Joystick m_Console{3};
+  //*(bool autoSplitShenanigans());
+
 
   public:
   // frc::Encoder leftEncoder{0, 1};  // DIO ports 0 and 1 for the left encoder ...
   // frc::Encoder rightEncoder{2, 3}; // DIO ports 2 and 3 for the right encoder ...
-
-
+  
     void RobotInit() override {
+      std::cerr << "hello world!" << std::endl;
       //initialize motors/sensors/etc. here
       //frc::SmartDashboard::PutString("My String", "Hello World!");
       //frc::SmartDashboard::PutBoolean("Holding Note", noteInShooter);
@@ -125,17 +144,70 @@ frc::Joystick m_Console{3};
     }
 
     void AutonomousInit() override {
+      int auto_switch_key = 0b0000;
+      auto_switch_key |= m_driverStation.GetRawButton(SWITCH_1) ? 0b1000 : 0x0;
+      auto_switch_key |= m_driverStation.GetRawButton(SWITCH_2) ? 0b0100 : 0b0;
+      auto_switch_key |= m_driverStation.GetRawButton(SWITCH_3) ? 0b0010 : 00;
+      auto_switch_key |= m_driverStation.GetRawButton(SWITCH_4) ? 0b0001 : 0;
+
+      switch (auto_switch_key) {
+        case 0b1000: { // help
+          auto_traj = traj_help;
+          
+          break;
+        }
+        case 0b1001: { // help_premium
+          auto_traj = traj_help_premium;
+          break;
+        }
+        case 0b0100: { // frfr
+          auto_traj = traj_frfr;
+          break;
+        }
+        case 0b0101: { // frfr_proc
+          auto_traj = traj_frfr_proc;
+          break;
+        }
+        case 0b0010: { // aggro
+          auto_traj = traj_aggro;
+          break;
+        }
+        case 0b011: { // aggro_proc
+          auto_traj = traj_aggro_proc;
+          break;
+        }
+        default: {
+          std::cout << "Invalid switch combo; defaulting to help" << std::endl;
+          auto_traj = traj_help;
+          break;
+        }
+      }
+            
 
       headingController.EnableContinuousInput(-M_PI, M_PI);
 
       //auto code goes here
-      if (traj_frfr.has_value()) {
+      if (auto_traj.has_value()) {
         // Get the initial pose of the trajectory
-        if (auto initialPose = traj_frfr.GetInitialPose(IsRedAlliance())) {
+        if (auto initialPose = auto_traj.value().GetInitialPose(IsRedAlliance())) {
+          
+          //******   Debugging start    ********//
+          
+          std::cout << "Got initial position -> X: " << initialPose.value().X().value() << " Y: " << initialPose.value().Y().value() << std::endl;
+
+          std::vector<frc::Pose2d> pos_vector = auto_traj.value().GetPoses();
+          for (size_t i = 0; i < pos_vector.size(); i++) {
+            std::cout << "Position Vector index" << i << " -> X: " << pos_vector.at(i).X().value() << ", Y: " << pos_vector.at(i).Y().value() << std::endl;
+          }
+          
+          
+          //******   Debugging end   ********//
           // Reset odometry to the start of the trajectory
           std::cout << "Resetting Gyro" << std::endl;
           m_swerve.ResetPose(initialPose.value());
         }
+      } else {
+        std::cout << "No auto selected" << std::endl;
       }
 
       // Reset and start the timer when the autonomous period begins
@@ -144,29 +216,67 @@ frc::Joystick m_Console{3};
     }
 
     void AutonomousPeriodic() override {
-      
-      if (traj_frfr.has_value()) {
-        // Sample the trajectory at the current time into the autonomous period
-        if (auto sample = traj_frfr.value().SampleAt(timer.Get(), IsRedAlliance())) {
-            FollowTrajectory(sample.value());
-        } else {
-          std::cout << "No more samples!" << std::endl;
+      static int sampleIndex = 0;
+      std::vector<int> splits = auto_traj.value().splits;
+      std::optional<choreo::SwerveSample> last_sample;
+
+      static bool metSplitCondition = false;
+
+
+
+      if (auto_traj.has_value()) {
+        // if we are not at a split
+        // or we are not at the end
+        // or we have met split conditions
+        if ( !*find(splits.begin(), splits.end(), sampleIndex) || sampleIndex != *splits.end() || metSplitCondition ) {
+          metSplitCondition = false;
+          if (!timer.IsRunning()) timer.Start();
+          if (splitTimer.IsRunning()) splitTimer.Stop();
+          
+          // Sample the trajectory at the current time into the autonomous period
+          if (auto sample = auto_traj.value().SampleAt(timer.Get(), IsRedAlliance())) {
+              FollowTrajectory(sample.value());
+          } else {
+            std::cout << "No more samples!" << std::endl;
+          }
+          
+          int splits_count = sizeof(auto_traj.value().splits)/sizeof(int);
+          // int is 4 bytes
+
+          frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
+          
+
+          static int last_timer = 0;
+          if (last_timer != timer.Get().value()) {
+            std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
+          } 
+          last_timer = timer.Get().value();
+
+          // Check if we have moved to next sample and update out index
+          if (last_sample != auto_traj.value().SampleAt(timer.Get(), IsRedAlliance())) {
+            last_sample = auto_traj.value().SampleAt(timer.Get(), IsRedAlliance());
+            sampleIndex++;
+          }
+
+        } else { // In a split
+          if (timer.IsRunning()) timer.Stop();
+          if (!splitTimer.IsRunning()) splitTimer.Restart();
+
+          int whichSplit = *find(splits.begin(), splits.end(), sampleIndex);
+
+
+          //metSplitCondition = autoSplitShenanigans();
+
+          if (auto_traj == traj_frfr) {
+            metSplitCondition = autoSplitFRFR(whichSplit);
+          } else if (auto_traj == traj_aggro) {
+            metSplitCondition = autoSplitAggro(whichSplit);
+          }
         }
-        
-        int splits = sizeof(traj_frfr.value().splits)/sizeof(int);
-        // int is 4 bytes
-
-        frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
-        
-
-        static int last_timer = 0;
-        if (last_timer != timer.Get().value()) {
-          std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
-        } 
-        last_timer = timer.Get().value();
-
       }
+
       m_swerve.UpdateOdometry();
+      
     }
 
     void TestInit() override {
@@ -202,6 +312,7 @@ frc::Joystick m_Console{3};
   private:
     frc::XboxController m_driverController{0};
     frc::XboxController m_operatorController{1};
+    frc::Joystick m_driverStation{2};
     Drivetrain m_swerve;
     
 
@@ -351,7 +462,7 @@ frc::Joystick m_Console{3};
         }
         case 180: { // down
           std::cout << "Elevator down" << std::endl;
-          m_ElevatorController.SetReference(0.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          m_ElevatorController.SetReference(10.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           break;
         }
         case 225: {
@@ -394,7 +505,7 @@ frc::Joystick m_Console{3};
     }
 
 
-    // OTHER FUNCTIONS
+    // OTHER minor FUNCTIONS
 
 
 
@@ -512,6 +623,87 @@ frc::Joystick m_Console{3};
     };
 
 
+    // auto splits paths
+
+    bool autoSplitFRFR(int whichSplit) {
+      bool metSplitCondition = false;
+      switch (whichSplit) {
+        case 0: {
+          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          metSplitCondition = true;
+          break;
+        }
+        case 1: {
+          m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          if (splitTimer.HasElapsed(1.0_s)) {
+            m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+            metSplitCondition = true;
+          }
+          break;
+        }
+        case 2: {
+          if (splitTimer.HasElapsed(3.0_s)) {
+            metSplitCondition = true;
+          }
+          break;
+        }
+        case 3: {
+          m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          if (splitTimer.HasElapsed(1.0_s)) {
+            m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+            metSplitCondition = true;
+          }
+          break;
+        }
+        default: {
+          std::cout << "How did you even get here?" << std::endl;
+          metSplitCondition = true; // tentutively
+          break;
+        }
+        }
+        return metSplitCondition;
+      }
+
+
+    bool autoSplitAggro(int whichSplit) {
+      bool metSplitCondition = false;
+      switch (whichSplit) {
+        case 0: {
+          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          metSplitCondition = true;
+          break;
+        }
+        case 1: {
+          m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          if (splitTimer.HasElapsed(1.0_s)) {
+            m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+            metSplitCondition = true;
+          }
+          break;
+        }
+        case 2: {
+          if (splitTimer.HasElapsed(3.0_s)) {
+            metSplitCondition = true;
+          }
+          break;
+        }
+        case 3: {
+          m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          if (splitTimer.HasElapsed(1.0_s)) {
+            m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+            metSplitCondition = true;
+          }
+          break;
+        }
+        default: {
+          std::cout << "How did you even get here?" << std::endl;
+          metSplitCondition = true; // tentutively
+          break;
+        }
+        }
+        return metSplitCondition;
+      }
+    
 
 
 };

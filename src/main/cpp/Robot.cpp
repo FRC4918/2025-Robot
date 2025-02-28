@@ -56,7 +56,7 @@ static double atIntegral;
 // for auto and choreo stuff
 frc::PIDController xController{20.0, 0.0, 0.0};//10//1
 frc::PIDController yController{20.0, 0.0, 0.0};//10//1
-frc::PIDController headingController{20.0, 0.0, 0.0};//7.5//1
+frc::PIDController headingController{15.0, 0.0, 0.0};//7.5//1
 
 frc::Timer timer;
 frc::Timer splitTimer;
@@ -119,7 +119,7 @@ class Robot : public frc::TimedRobot {
 
       rev::spark::SparkMaxConfig elevator_master_config;
       elevator_master_config.closedLoop
-        .P(1.0)
+        .P(0.9)
         .I(0.0)
         .D(0.0)
         .OutputRange(-1.0, 1.0);
@@ -138,9 +138,9 @@ class Robot : public frc::TimedRobot {
       // We need to run our vision program in a separate thread.
       // If not run separately (in parallel), our robot program will never
       // get to execute.
-      std::thread visionThread( VisionThread );
+      //std::thread visionThread( VisionThread );
 
-      visionThread.detach();
+      //visionThread.detach();
     }
 
     void AutonomousInit() override {
@@ -149,31 +149,36 @@ class Robot : public frc::TimedRobot {
       auto_switch_key |= m_driverStation.GetRawButton(SWITCH_2) ? 0b0100 : 0b0;
       auto_switch_key |= m_driverStation.GetRawButton(SWITCH_3) ? 0b0010 : 00;
       auto_switch_key |= m_driverStation.GetRawButton(SWITCH_4) ? 0b0001 : 0;
-
+      std::cout << "auto: " << auto_switch_key << std::endl;
       switch (auto_switch_key) {
         case 0b1000: { // help
           auto_traj = traj_help;
-          
+          std::cout << "auto: help" << std::endl;
           break;
         }
         case 0b1001: { // help_premium
           auto_traj = traj_help_premium;
+          std::cout << "auto: help p" << std::endl;
           break;
         }
         case 0b0100: { // frfr
           auto_traj = traj_frfr;
+          std::cout << "auto: frfr no proc" << std::endl;
           break;
         }
         case 0b0101: { // frfr_proc
           auto_traj = traj_frfr_proc;
+          std::cout << "auto: frfr proc" << std::endl;
           break;
         }
         case 0b0010: { // aggro
           auto_traj = traj_aggro;
+          std::cout << "auto: aggro no proc" << std::endl;
           break;
         }
         case 0b011: { // aggro_proc
           auto_traj = traj_aggro_proc;
+          std::cout << "auto: aggro proc" << std::endl;
           break;
         }
         default: {
@@ -222,6 +227,7 @@ class Robot : public frc::TimedRobot {
 
       static bool metSplitCondition = false;
 
+      std::cout << "Sample index: " << sampleIndex << std::endl;
 
 
       if (auto_traj.has_value()) {
@@ -248,7 +254,7 @@ class Robot : public frc::TimedRobot {
 
           static int last_timer = 0;
           if (last_timer != timer.Get().value()) {
-            std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
+            //std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
           } 
           last_timer = timer.Get().value();
 
@@ -259,18 +265,29 @@ class Robot : public frc::TimedRobot {
           }
 
         } else { // In a split
+          std::cout << "Splitting..." << std::endl;
           if (timer.IsRunning()) timer.Stop();
           if (!splitTimer.IsRunning()) splitTimer.Restart();
 
           int whichSplit = *find(splits.begin(), splits.end(), sampleIndex);
+
+          std::cout << "Split #" << whichSplit << std::endl;
 
 
           //metSplitCondition = autoSplitShenanigans();
 
           if (auto_traj == traj_frfr) {
             metSplitCondition = autoSplitFRFR(whichSplit);
+            std::cout << "frfr split" << std::endl;
           } else if (auto_traj == traj_aggro) {
             metSplitCondition = autoSplitAggro(whichSplit);
+            std::cout << "aggro split" << std::endl;
+          } else if (auto_traj == traj_help_premium) {
+            metSplitCondition = autoSplitHELPP(whichSplit);
+            std::cout << "helpp split" << std::endl;
+          } else {
+            metSplitCondition = autoSplitHELPP(whichSplit);
+            std::cout << "else (helpp) split" << std::endl;
           }
         }
       }
@@ -440,11 +457,15 @@ class Robot : public frc::TimedRobot {
       
       // Elevator
       //std::cout << m_operatorController.GetPOV() << std::endl;
+
+      if (m_operatorController.GetXButton()) {
+        
+      }
       
       switch (m_operatorController.GetPOV()) {
         case 0: { // up
           std::cout << "Elevator up" << std::endl;
-          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
+          m_ElevatorController.SetReference(180.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
           //m_MasterElevatorMotors
           break;
         }
@@ -595,12 +616,12 @@ class Robot : public frc::TimedRobot {
 
         // Calculate feedback velocities
         units::meters_per_second_t xFeedback{xController.Calculate(pose.X().value(), sample.x.value())};
-        std::cout << "X position is " << pose.X().value() << " and sample position is " << sample.x.value() << " so feedforward is " << xFeedback.value();
+        //std::cout << "X position is " << pose.X().value() << " and sample position is " << sample.x.value() << " so feedforward is " << xFeedback.value();
         units::meters_per_second_t yFeedback{yController.Calculate(pose.Y().value(), sample.y.value())};
         units::radians_per_second_t headingFeedback{
             headingController.Calculate(pose.Rotation().Radians().value(), sample.heading.value())
         };
-        std::cout << " Sample vx is " << sample.vx.value();
+        //std::cout << " Sample vx is " << sample.vx.value();
         // Generate the next speeds for the robot
         frc::ChassisSpeeds speeds{
             sample.vx + xFeedback,
@@ -618,7 +639,7 @@ class Robot : public frc::TimedRobot {
             speeds.omega = (units::radians_per_second_t)0.0;
         }
         // Apply the generated speeds
-        std::cout << " New speed is " << speeds.vx.value() << std::endl;
+        //std::cout << " New speed is " << speeds.vx.value() << std::endl;
         m_swerve.Drive(speeds.vx, speeds.vy, speeds.omega, true);
     };
 
@@ -688,6 +709,31 @@ class Robot : public frc::TimedRobot {
           break;
         }
         case 3: {
+          m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          if (splitTimer.HasElapsed(1.0_s)) {
+            m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
+            metSplitCondition = true;
+          }
+          break;
+        }
+        default: {
+          std::cout << "How did you even get here?" << std::endl;
+          metSplitCondition = true; // tentutively
+          break;
+        }
+        }
+        return metSplitCondition;
+      }
+
+    bool autoSplitHELPP(int whichSplit) {
+      bool metSplitCondition = false;
+      switch (whichSplit) {
+        case 0: {
+          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          metSplitCondition = true;
+          break;
+        }
+        case 1: {
           m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
           if (splitTimer.HasElapsed(1.0_s)) {
             m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);

@@ -56,7 +56,7 @@ static double atIntegral;
 // for auto and choreo stuff
 frc::PIDController xController{20.0, 0.0, 0.0};//10//1
 frc::PIDController yController{20.0, 0.0, 0.0};//10//1
-frc::PIDController headingController{15.0, 0.0, 0.0};//7.5//1
+frc::PIDController headingController{12.0, 0.0, 0.0};//7.5//1
 
 frc::Timer timer;
 frc::Timer splitTimer;
@@ -138,9 +138,9 @@ class Robot : public frc::TimedRobot {
       // We need to run our vision program in a separate thread.
       // If not run separately (in parallel), our robot program will never
       // get to execute.
-      //std::thread visionThread( VisionThread );
+      std::thread visionThread( VisionThread );
 
-      //visionThread.detach();
+      visionThread.detach();
     }
 
     void AutonomousInit() override {
@@ -215,6 +215,8 @@ class Robot : public frc::TimedRobot {
         std::cout << "No auto selected" << std::endl;
       }
 
+      m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+
       // Reset and start the timer when the autonomous period begins
       timer.Restart();
       //timer.Stop //timer affects 
@@ -227,7 +229,7 @@ class Robot : public frc::TimedRobot {
 
       static bool metSplitCondition = false;
 
-      std::cout << "Sample index: " << sampleIndex << std::endl;
+      //std::cout << "Sample index: " << sampleIndex << std::endl;
 
 
       if (auto_traj.has_value()) {
@@ -289,7 +291,15 @@ class Robot : public frc::TimedRobot {
             metSplitCondition = autoSplitHELPP(whichSplit);
             std::cout << "else (helpp) split" << std::endl;
           }
+
+          //Hard coded coral placement (because auto ain't working)
+
         }
+
+          if (timer.Get().value() > 8) {
+              m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          }
+
       }
 
       m_swerve.UpdateOdometry();
@@ -465,7 +475,7 @@ class Robot : public frc::TimedRobot {
       switch (m_operatorController.GetPOV()) {
         case 0: { // up
           std::cout << "Elevator up" << std::endl;
-          m_ElevatorController.SetReference(180.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
+          m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
           //m_MasterElevatorMotors
           break;
         }
@@ -491,7 +501,7 @@ class Robot : public frc::TimedRobot {
         }
         case 270: { // left
           std::cout << "elevator 2" << std::endl;
-          m_ElevatorController.SetReference(50.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          m_ElevatorController.SetReference(45.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           break;
         }
         case 315: {
@@ -729,7 +739,7 @@ class Robot : public frc::TimedRobot {
       bool metSplitCondition = false;
       switch (whichSplit) {
         case 0: {
-          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           metSplitCondition = true;
           break;
         }

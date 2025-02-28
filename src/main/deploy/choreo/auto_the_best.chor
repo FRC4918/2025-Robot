@@ -40,8 +40,8 @@
    "val":8.14
   },
   "radius":{
-   "exp":"2 in",
-   "val":0.0508
+   "exp":"1 in",
+   "val":0.0254
   },
   "vmax":{
    "exp":"6000 RPM",

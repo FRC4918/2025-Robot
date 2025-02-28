@@ -26,12 +26,11 @@ double headOnOffsetDeg = 0.0;
 void VisionThread() {
   frc::AprilTagDetector detector;
   
-
   // look for tag36h11, correct 3 error bits
     detector.AddFamily("tag36h11", 0);
 
     frc::AprilTagDetector::Config detectorConfig;
-    detectorConfig.debug = true;
+    //detectorConfig.debug = true; DO NOT ENABLE THIS - IT CRASHES THE RIO
     detectorConfig.quadDecimate = 0.9;
     detector.SetConfig(detectorConfig);
 
@@ -51,14 +50,14 @@ void VisionThread() {
     //camera2 = frc::CameraServer::StartAutomaticCapture(1); //April Tag Camera
 
     // Set the resolution
-    camera1.SetResolution(480, 360); //160, 120 //320, 240 //640, 480
+    camera1.SetResolution(160, 120); //160, 120 //320, 240 //640, 480 // MM 2-28-25 setting from 480,360 to 160, 120 to save memory
     //camera2.SetResolution(640, 480);
 
     // Get a CvSink. This will capture Mats from the Camera
     auto cvSink = frc::CameraServer::GetVideo();
     // Setup a CvSource. This will send images back to the Dashboard
-    cs::CvSource outputStream =
-        frc::CameraServer::PutVideo("Detected", 640, 480); 
+    //cs::CvSource outputStream =
+    //    frc::CameraServer::PutVideo("Detected", 320, 240); // MM 2-28-25 reduced from 640, 480 to 320, 240, then commented out to try and stop memory crashes
     
     cvSink.SetSource(camera1); //camera2
 
@@ -90,20 +89,21 @@ void VisionThread() {
       units::angle::degree_t gyroYawHeadingLocal = gyroYawHeading;
       if (cvSink.GrabFrame(mat) == 0) {
         // Send the output the error.
-        outputStream.NotifyError(cvSink.GetError());
+        //outputStream.NotifyError(cvSink.GetError());
         // skip the rest of the current iteration
         continue;
       }
 
       cv::cvtColor(mat, grayMat, cv::COLOR_BGR2GRAY);
 
+
       cv::Size g_size = grayMat.size();
+
       frc::AprilTagDetector::Results detections =
           detector.Detect(g_size.width, g_size.height, grayMat.data);
 
       // have not seen any tags yet
       tags.clear();
-
 
       //desiredYaw = 0; // if this is enabled, robot will not remember tag location if it leaves the field of view
       needToMoveDist = 0.0;
@@ -168,7 +168,6 @@ void VisionThread() {
                    rotation.Y().value(),
                    rotation.Z().value() }});
 
-
         cv::putText(mat, std::to_string(selectedTag), 
           cv::Point(30, 30), cv::FONT_ITALIC, 0.5, selectedColor, 2);
         
@@ -192,6 +191,7 @@ void VisionThread() {
 
         // How far we want to be from the tag
         double targetDist;
+
 
 
         // Set global variables to use april tag data
@@ -250,17 +250,14 @@ void VisionThread() {
       }
       
       }
-      
-
 
 
       //put list of tags onto NT
       pubTags.Set(tags);
 
       // Give the output stream a new image to display
-      outputStream.PutFrame(mat);
+      //outputStream.PutFrame(mat);
 
-      
       
     }
 }

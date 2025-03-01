@@ -5,7 +5,7 @@
 
 extern cs::UsbCamera camera1;
 extern units::angle::degree_t gyroYawHeading;
-extern int selectedTag;
+//extern int selectedTag;
 
 //April Tag Variables
 extern double desiredYaw;

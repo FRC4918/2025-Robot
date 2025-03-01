@@ -33,13 +33,27 @@
 #define SWITCH_3 10
 #define SWITCH_4 11
 
+//Elevator poses
+#define LEVEL_0 10.0 // aka trough
+#define LEVEL_1 45.0
+#define LEVEL_2 100.0
+#define LEVEL_3 185.0
 
+//Vision vars
+double desiredYaw;
+double needToMoveDist;
+double headOnOffsetDeg;
+
+frc::PIDController headOnController{20.0, 0.0, 0.0};
+frc::PIDController needToMoveDistController{20.0, 0.0, 0.0};
 
 
 //Robot Pos Variables
 //static units::angle::degree_t gyroYawHeading; //robot yaw (degrees)
 static units::angular_velocity::degrees_per_second_t gyroYawRate; //robot rotate rate (degrees/second)
 static frc::Pose2d pose;
+
+
 
 //Camera Variables
 //cs::UsbCamera camera1;
@@ -198,12 +212,12 @@ class Robot : public frc::TimedRobot {
           
           //******   Debugging start    ********//
           
-          std::cout << "Got initial position -> X: " << initialPose.value().X().value() << " Y: " << initialPose.value().Y().value() << std::endl;
+          /*std::cout << "Got initial position -> X: " << initialPose.value().X().value() << " Y: " << initialPose.value().Y().value() << std::endl;
 
           std::vector<frc::Pose2d> pos_vector = auto_traj.value().GetPoses();
           for (size_t i = 0; i < pos_vector.size(); i++) {
             std::cout << "Position Vector index" << i << " -> X: " << pos_vector.at(i).X().value() << ", Y: " << pos_vector.at(i).Y().value() << std::endl;
-          }
+          }*/
           
           
           //******   Debugging end   ********//
@@ -222,10 +236,14 @@ class Robot : public frc::TimedRobot {
       //timer.Stop //timer affects 
     }
 
+
+
     void AutonomousPeriodic() override {
       static int sampleIndex = 0;
       std::vector<int> splits = auto_traj.value().splits;
       std::optional<choreo::SwerveSample> last_sample;
+
+      //auto_traj.value().GetSplit(0); // lookup function
 
       static bool metSplitCondition = false;
 
@@ -236,7 +254,7 @@ class Robot : public frc::TimedRobot {
         // if we are not at a split
         // or we are not at the end
         // or we have met split conditions
-        if ( !*find(splits.begin(), splits.end(), sampleIndex) || sampleIndex != *splits.end() || metSplitCondition ) {
+        if ( whereIs(splits, sampleIndex) < 0 || sampleIndex != splits[splits.size()-1] || metSplitCondition ) {
           metSplitCondition = false;
           if (!timer.IsRunning()) timer.Start();
           if (splitTimer.IsRunning()) splitTimer.Stop();
@@ -271,7 +289,7 @@ class Robot : public frc::TimedRobot {
           if (timer.IsRunning()) timer.Stop();
           if (!splitTimer.IsRunning()) splitTimer.Restart();
 
-          int whichSplit = *find(splits.begin(), splits.end(), sampleIndex);
+          int whichSplit = whereIs(splits, sampleIndex);
 
           std::cout << "Split #" << whichSplit << std::endl;
 
@@ -288,17 +306,17 @@ class Robot : public frc::TimedRobot {
             metSplitCondition = autoSplitHELPP(whichSplit);
             std::cout << "helpp split" << std::endl;
           } else {
-            metSplitCondition = autoSplitHELPP(whichSplit);
-            std::cout << "else (helpp) split" << std::endl;
+            //metSplitCondition = autoSplitHELPP(whichSplit);
+            std::cout << "no split function for this auto" << std::endl;
           }
 
           //Hard coded coral placement (because auto ain't working)
 
         }
 
-          if (timer.Get().value() > 8) {
-              m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
-          }
+          // if (timer.Get().value() > 8) {
+          //     m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          // }
 
       }
 
@@ -410,10 +428,10 @@ class Robot : public frc::TimedRobot {
 
 
     // cycle through tags
-    if (m_driverController.GetStartButtonPressed()) {
+    /*if (m_driverController.GetStartButtonPressed()) {
       selectedTag++;
       if (selectedTag > 11) selectedTag = 1;
-    }
+    }*/
 
     // Look To April Tag (Left Bumper)
     if (m_driverController.GetLeftBumperButton()) {
@@ -434,18 +452,14 @@ class Robot : public frc::TimedRobot {
     if (m_driverController.GetRightBumperButton()) {
 
 
-      if (std::abs(atData.headOnOffsetDeg) > 0.05) {
-        PIDReturn VisionPIDReturn = VisionPIDController(atData.headOnOffsetDeg, atPreviousError, atIntegral);
-        ySpeed = (units::velocity::meters_per_second_t) -VisionPIDReturn.PIDReturnValue;
+      if (std::abs((double)atData.xSpeed) > 0.05) {
+        ySpeed = atData.ySpeed;
+        std::cout << "PID Return: " << (double)ySpeed << std::endl;
 
-        std::cout << "PID Return: " << VisionPIDReturn.PIDReturnValue << std::endl;
-
-        atPreviousError = VisionPIDReturn.previousError;
-        atIntegral = VisionPIDReturn.integral;
       } else {
         // When we get aligned, start moving towards tag
         std::cout << "Lined up" << std::endl;
-        xSpeed = (units::velocity::meters_per_second_t) atData.needToMoveDist * 2.0;
+        xSpeed = atData.xSpeed;
       }
       
       
@@ -512,6 +526,8 @@ class Robot : public frc::TimedRobot {
       if (m_operatorController.GetBButton()) {
         //m_CoralMotor.SetVoltage((units::volt_t) 12.0);
         m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+      } else if (m_operatorController.GetYButton()) {
+        m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -0.7);
       } else {
         m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
       }
@@ -523,68 +539,37 @@ class Robot : public frc::TimedRobot {
 
 
 
-    struct PIDReturn {
-      double PIDReturnValue;
-      double previousError;
-      double integral;
-    };
-
-    /**
-     * processVariable = Yaw/Y axis rotation
-     * previousError = 0 initial, last error next times. how far away we were on the last loop
-     * integral = 0 initial, feed it from returns
-     */
-    PIDReturn VisionPIDController(double processVariable, double previousError, double integral) {
-      double setpoint = 0;
-      double Kp = 1; //1 is cool, first to chage
-      double Ki = 0; //0.1 too high?
-      double Kd = 0.1; //0.1 is cool, 2nd to change
-
-      double error = setpoint - processVariable;
-      integral += error;
-      double derivative = error - previousError;
-      previousError = error;
-      double returnVal = Kp * error + Ki * integral + Kd * derivative;
-
-
-      
-
-      PIDReturn returnValues = {
-        returnVal,
-        previousError,
-        integral,
-      };
-      return returnValues;
-    }
-
-
-
 
 
     struct ATagVars {
       units::angular_velocity::radians_per_second_t radsToTurn;
-      double needToMoveDist;
-      double headOnOffsetDeg;
+      units::velocity::meters_per_second_t xSpeed;
+      units::velocity::meters_per_second_t ySpeed;
     };
     ATagVars GetATagVariables() {
       ATagVars atData;
 
       gyroYawHeading = m_swerve.GetYaw();
       gyroYawRate = m_swerve.GetRate();
+      frc::Pose2d pose = m_swerve.m_poseEstimator.GetEstimatedPosition();
 
+      //heading 
       double dEventualYaw = (double) gyroYawHeading + (0.5 / 600.0) * (double) gyroYawRate * std::abs((double) gyroYawRate); // accounts for overshooting
       //find the shortest degrees to face tag
       int degreesToTurn = (int) ((double) dEventualYaw - desiredYaw) % 360;
       if (degreesToTurn > 180) degreesToTurn -= 360;
       if (degreesToTurn < -180) degreesToTurn += 360;
       // Converts degrees from vision thread to radians per second.
-      units::angular_velocity::radians_per_second_t radsToTurn =
-       (units::angular_velocity::radians_per_second_t) degreesToTurn * M_PI / 180;
+      units::angular_velocity::radians_per_second_t radsToTurn{ degreesToTurn * M_PI / 180 };
+
+      //move pids
+      units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
+      units::meters_per_second_t proximity{ needToMoveDistController.Calculate((double) pose.X(), needToMoveDist) }; // to move to a set distance from tag
       
       
       atData.radsToTurn = radsToTurn;
-      atData.headOnOffsetDeg = headOnOffsetDeg;
-      atData.needToMoveDist = needToMoveDist;
+      atData.ySpeed = horizontal;
+      atData.xSpeed = proximity;
       
       return atData;
     }
@@ -743,6 +728,17 @@ class Robot : public frc::TimedRobot {
         return metSplitCondition;
       }
     
+
+
+    // minor minor functions
+
+    //returns index of element thing if thing exists in vector, else returns -1
+    int whereIs(std::vector<int> vector, int thing) {
+      for (int i=0; i<vector.size(); i++) {
+        if (vector[i] == thing) return i;
+      }
+      return -1;
+    }
 
 
 };

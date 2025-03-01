@@ -14,14 +14,10 @@
 
 
 
-cs::UsbCamera camera1;
+cs::UsbCamera front_camera;
 units::angle::degree_t gyroYawHeading;
 
-int selectedTag = 0;
-
-double desiredYaw = 0.0;
-double needToMoveDist = 0.0;
-double headOnOffsetDeg = 0.0;
+//int selectedTag = 0;
 
 void VisionThread() {
   frc::AprilTagDetector detector;
@@ -46,20 +42,20 @@ void VisionThread() {
     frc::AprilTagPoseEstimator estimator(poseEstConfig);
 
     // Get the USB camera from CameraServer
-    camera1 = frc::CameraServer::StartAutomaticCapture(0); //Note Camera
+    front_camera = frc::CameraServer::StartAutomaticCapture(0); //Note Camera
     //camera2 = frc::CameraServer::StartAutomaticCapture(1); //April Tag Camera
 
     // Set the resolution
-    camera1.SetResolution(160, 120); //160, 120 //320, 240 //640, 480 // MM 2-28-25 setting from 480,360 to 160, 120 to save memory
+    front_camera.SetResolution(160, 120); //160, 120 //320, 240 //640, 480 //480, 360 - MM reduced to save memory, could probably increase back to 480,360
     //camera2.SetResolution(640, 480);
 
     // Get a CvSink. This will capture Mats from the Camera
     auto cvSink = frc::CameraServer::GetVideo();
     // Setup a CvSource. This will send images back to the Dashboard
     //cs::CvSource outputStream =
-    //    frc::CameraServer::PutVideo("Detected", 320, 240); // MM 2-28-25 reduced from 640, 480 to 320, 240, then commented out to try and stop memory crashes
+    //    frc::CameraServer::PutVideo("Detected", 640, 480); // MM - Commented out to try and save memory, could probably uncomment
     
-    cvSink.SetSource(camera1); //camera2
+    cvSink.SetSource(front_camera); //camera2
 
     // Mats are very memory expensive. Lets reuse this Mat.
     cv::Mat mat;
@@ -87,6 +83,7 @@ void VisionThread() {
       // grab robot yaw at frame grab
 
       units::angle::degree_t gyroYawHeadingLocal = gyroYawHeading;
+
       if (cvSink.GrabFrame(mat) == 0) {
         // Send the output the error.
         //outputStream.NotifyError(cvSink.GetError());
@@ -168,12 +165,12 @@ void VisionThread() {
                    rotation.Y().value(),
                    rotation.Z().value() }});
 
-        cv::putText(mat, std::to_string(selectedTag), 
-          cv::Point(30, 30), cv::FONT_ITALIC, 0.5, selectedColor, 2);
+        //cv::putText(mat, std::to_string(selectedTag), 
+        //  cv::Point(30, 30), cv::FONT_ITALIC, 0.5, selectedColor, 2);
         
 
         // Only update tag vars if we select the detected tag
-        if (detection->GetId() == selectedTag) {
+        //if (detection->GetId() == selectedTag) {
         //draw selected thing
         cv::circle(mat, cv::Point(c.x, c.y), 10, selectedColor, 3);
 
@@ -204,6 +201,7 @@ void VisionThread() {
         units::angle::degree_t tagBearing = gyroYawHeadingLocal + (units::angle::degree_t) tagRotDistDeg; // Calculates fixed tag location relative to initial gyro rotation
         desiredYaw = (double) tagBearing; // Writes desired yaw to be tag location
         
+
         // Predator Alignment
         // Tag headon
         headOnOffsetDeg = tagHeadOnDegs[1];
@@ -211,43 +209,43 @@ void VisionThread() {
 
 
         
+        // MM - We're not doing anything with this - delete?
+        // //specific tag adjustments (tag switch case)
+        // switch (detection->GetId()) {
+        //   // player/coral stations
+        //   case 1: // red
+        //   case 2:
+        //   case 12: // blue
+        //   case 13: {
+        //     // align to collect
+        //     break;
+        //   }
 
-        //specific tag adjustments (tag switch case)
-        switch (detection->GetId()) {
-          // player/coral stations
-          case 1: // red
-          case 2:
-          case 12: // blue
-          case 13: {
-            // align to collect
-            break;
-          }
+        //   // reefs
+        //   case 6: // red
+        //   case 7:
+        //   case 8:
+        //   case 9:
+        //   case 10:
+        //   case 11:
+        //   case 17: // blue
+        //   case 18:
+        //   case 19:
+        //   case 20:
+        //   case 21:
+        //   case 22: {
+        //     // align elevator with coral acceptor things
+        //     break;
+        //   }
 
-          // reefs
-          case 6: // red
-          case 7:
-          case 8:
-          case 9:
-          case 10:
-          case 11:
-          case 17: // blue
-          case 18:
-          case 19:
-          case 20:
-          case 21:
-          case 22: {
-            // align elevator with coral acceptor things
-            break;
-          }
+        //   default: {
 
-          default: {
+        //     break;
+        //   }
 
-            break;
-          }
+        // }
 
-        }
-
-      }
+      //}
       
       }
 
@@ -256,7 +254,7 @@ void VisionThread() {
       pubTags.Set(tags);
 
       // Give the output stream a new image to display
-      //outputStream.PutFrame(mat);
+      //outputStream.PutFrame(mat); MM commented out while memory troubleshooting, can probably uncomment
 
       
     }

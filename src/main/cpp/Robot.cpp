@@ -45,7 +45,7 @@ units::length::meter_t needToMoveDist;
 double headOnOffsetDeg;
 double centeredOnTagX = 0;
 
-frc::PIDController headOnController{1.0, 0.0, 0.1}; // angle
+frc::PIDController headOnController{0.5, 0.0, 0.1}; // angle
 frc::PIDController needToMoveDistController{10.0, 0.0, 0.0}; // sideshift
 
 
@@ -458,13 +458,11 @@ class Robot : public frc::TimedRobot {
     // Held bumper. Hunt and pounce (predator alignment) April Tag (X)
     if (m_driverController.GetXButton()) {
 
-      //rot = atData.radsToTurn*10; // turn robot to face tag
-
-      if (std::abs((double)atData.xSpeed) > 0.1) {
+      if (/*std::abs((double)atData.ySpeed) > 0.1*/ std::abs(headOnOffsetDeg) > 0.1) {
         // move robot horizontally until we are head-on with tag
         //xSpeed = atData.xSpeed;
         std::cout << "PID Return: " << atData.ySpeed.value() << std::endl;
-        ySpeed = atData.ySpeed;
+        ySpeed = -atData.ySpeed;
 
       } else {
         //xSpeed = 0_mps;
@@ -473,9 +471,11 @@ class Robot : public frc::TimedRobot {
         std::cout << "Lined Up" << std::endl;
         //ySpeed = -atData.ySpeed;
         //std::cout << "Lined up, moving with yv: " << -ySpeed.value() << std::endl;
-        //centeredOnTagX = pose.X().value();
+        centeredOnTagX = pose.X().value();
 
       }
+
+      rot = atData.radsToTurn*10; // turn robot to face tag
 
       fieldRelative = true;
     }
@@ -601,7 +601,7 @@ class Robot : public frc::TimedRobot {
       //units::velocity::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
       
       units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
-      
+      std::cout << "headonoffsetdeg: " << headOnOffsetDeg << std::endl;
       atData.radsToTurn = -radsToTurn;
       //atData.xSpeed = horizontal;
       //atData.ySpeed = proximity;

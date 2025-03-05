@@ -193,7 +193,7 @@ void VisionThread() {
         // How far we want to be from the tag
         units::length::meter_t targetDist; // Tag distance (Z-Axis)
 
-        std::cout << "Our values -> Tag Y (left to right): " << tagRotDist << ", Tag X (distance away): " << tagDist.value() << std::endl;
+        //std::cout << "Our values -> Tag Y (left to right): " << tagRotDist << ", Tag X (distance away): " << tagDist.value() << std::endl;
 
         // Set global variables to use april tag data
 
@@ -207,7 +207,7 @@ void VisionThread() {
         // Predator Alignment
         // Tag headon
         headOnOffsetDeg = tagHeadOnDegs[1];
-
+        std::cout << headOnOffsetDeg << std::endl;
 
 
         

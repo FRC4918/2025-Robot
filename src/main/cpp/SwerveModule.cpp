@@ -110,6 +110,8 @@ void MotorInitSpark(SparkMax &m_motor)
    //m_motor.SetOpenLoopRampRate(0.1); //0.1
    config.OpenLoopRampRate(0.1);
    config.ClosedLoopRampRate(0.1);
+
+
    
 
    // m_motor.SetIdleMode( rev::CANSparkMax::IdleMode::kCoast );
@@ -185,10 +187,10 @@ void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
    //config.OpenLoopRampRate(0.1);
    //config.ClosedLoopRampRate(0.1);
    ctre::phoenix6::configs::OpenLoopRampsConfigs m_openLoopRamp{};
-   m_openLoopRamp.DutyCycleOpenLoopRampPeriod = 0.1_s;
+   m_openLoopRamp.DutyCycleOpenLoopRampPeriod = 1.5_s;
    config.OpenLoopRamps = m_openLoopRamp;
    ctre::phoenix6::configs::ClosedLoopRampsConfigs m_closedLoopRamp{};
-   m_closedLoopRamp.DutyCycleClosedLoopRampPeriod = 0.1_s;
+   m_closedLoopRamp.DutyCycleClosedLoopRampPeriod = 1.5_s;
    config.ClosedLoopRamps = m_closedLoopRamp;
 
    //m_motor.Configure(config, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);

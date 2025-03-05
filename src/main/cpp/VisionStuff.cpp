@@ -52,8 +52,8 @@ void VisionThread() {
     // Get a CvSink. This will capture Mats from the Camera
     auto cvSink = frc::CameraServer::GetVideo();
     // Setup a CvSource. This will send images back to the Dashboard
-    //cs::CvSource outputStream =
-    //    frc::CameraServer::PutVideo("Detected", 640, 480); // MM - Commented out to try and save memory, could probably uncomment
+    cs::CvSource outputStream =
+        frc::CameraServer::PutVideo("Detected", 640, 480); // MM - Commented out to try and save memory, could probably uncomment
     
     cvSink.SetSource(front_camera); //camera2
 
@@ -86,7 +86,7 @@ void VisionThread() {
 
       if (cvSink.GrabFrame(mat) == 0) {
         // Send the output the error.
-        //outputStream.NotifyError(cvSink.GetError());
+        outputStream.NotifyError(cvSink.GetError());
         // skip the rest of the current iteration
         continue;
       }
@@ -103,7 +103,7 @@ void VisionThread() {
       tags.clear();
 
       //desiredYaw = 0; // if this is enabled, robot will not remember tag location if it leaves the field of view
-      needToMoveDist = 0.0;
+      needToMoveDist = 0.0_m;
       //std::cout << "i see a tag " << detections.size() << std::endl;
 
       for (const frc::AprilTagDetection* detection : detections) {
@@ -187,16 +187,14 @@ void VisionThread() {
         units::length::meter_t tagDist = pose.Z(); //robot distance from tag
 
         // How far we want to be from the tag
-        double targetDist;
+        units::length::meter_t targetDist; // Tag distance (Z-Axis)
 
 
 
         // Set global variables to use april tag data
 
         // Curious Alignment
-        // Tag distance (Z-Axis)
-        targetDist = 0.5; // Distance we want to be from april tag
-        needToMoveDist = (double) tagDist - targetDist;
+        
         // Tag rotation
         units::angle::degree_t tagBearing = gyroYawHeadingLocal + (units::angle::degree_t) tagRotDistDeg; // Calculates fixed tag location relative to initial gyro rotation
         desiredYaw = (double) tagBearing; // Writes desired yaw to be tag location
@@ -211,39 +209,42 @@ void VisionThread() {
         
         // MM - We're not doing anything with this - delete?
         // //specific tag adjustments (tag switch case)
-        // switch (detection->GetId()) {
-        //   // player/coral stations
-        //   case 1: // red
-        //   case 2:
-        //   case 12: // blue
-        //   case 13: {
-        //     // align to collect
-        //     break;
-        //   }
+        switch (detection->GetId()) {
+          // player/coral stations
+          case 1: // red
+          case 2:
+          case 12: // blue
+          case 13: {
+            // align to collect
+            targetDist = 0.5_m; // Distance we want to be from april tag 
+            break;
+          }
 
-        //   // reefs
-        //   case 6: // red
-        //   case 7:
-        //   case 8:
-        //   case 9:
-        //   case 10:
-        //   case 11:
-        //   case 17: // blue
-        //   case 18:
-        //   case 19:
-        //   case 20:
-        //   case 21:
-        //   case 22: {
-        //     // align elevator with coral acceptor things
-        //     break;
-        //   }
+          // reefs
+          case 6: // red
+          case 7:
+          case 8:
+          case 9:
+          case 10:
+          case 11:
+          case 17: // blue
+          case 18:
+          case 19:
+          case 20:
+          case 21:
+          case 22: {
+            // align elevator with coral acceptor things
+            targetDist = 0.0_m;
+            break;
+          }
 
-        //   default: {
+          default: {
 
-        //     break;
-        //   }
+            break;
+          }
 
-        // }
+        }
+        needToMoveDist = tagDist - targetDist;
 
       //}
       
@@ -254,7 +255,7 @@ void VisionThread() {
       pubTags.Set(tags);
 
       // Give the output stream a new image to display
-      //outputStream.PutFrame(mat); MM commented out while memory troubleshooting, can probably uncomment
+      outputStream.PutFrame(mat);
 
       
     }

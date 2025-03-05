@@ -34,18 +34,19 @@
 #define SWITCH_4 11
 
 //Elevator poses
-#define LEVEL_0 10.0 // aka trough
+#define LEVEL_0 5.0 // aka trough
 #define LEVEL_1 45.0
 #define LEVEL_2 100.0
-#define LEVEL_3 185.0
+#define LEVEL_3 180.0
 
 //Vision vars
 double desiredYaw;
-double needToMoveDist;
+units::length::meter_t needToMoveDist;
 double headOnOffsetDeg;
+double centeredOnTagX = 0;
 
-frc::PIDController headOnController{20.0, 0.0, 0.0};
-frc::PIDController needToMoveDistController{20.0, 0.0, 0.0};
+frc::PIDController headOnController{1.0, 0.0, 0.1}; // angle
+frc::PIDController needToMoveDistController{10.0, 0.0, 0.0}; // sideshift
 
 
 //Robot Pos Variables
@@ -53,6 +54,7 @@ frc::PIDController needToMoveDistController{20.0, 0.0, 0.0};
 static units::angular_velocity::degrees_per_second_t gyroYawRate; //robot rotate rate (degrees/second)
 static frc::Pose2d pose;
 
+static double currEleRef = LEVEL_0;
 
 
 //Camera Variables
@@ -75,9 +77,8 @@ frc::PIDController headingController{12.0, 0.0, 0.0};//7.5//1
 frc::Timer timer;
 frc::Timer splitTimer;
 
-
-
 std::optional<choreo::Trajectory<choreo::SwerveSample>> auto_traj;
+
 
 class Robot : public frc::TimedRobot {
   
@@ -104,6 +105,8 @@ class Robot : public frc::TimedRobot {
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_aggro_proc = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("aggressive_proc");
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help_premium = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_push = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("push");
+
 
   //*(bool autoSplitShenanigans());
 
@@ -185,9 +188,9 @@ class Robot : public frc::TimedRobot {
           std::cout << "auto: frfr proc" << std::endl;
           break;
         }
-        case 0b0010: { // aggro
-          auto_traj = traj_aggro;
-          std::cout << "auto: aggro no proc" << std::endl;
+        case 0b0010: { // push
+          auto_traj = traj_push;
+          std::cout << "auto: pusher" << std::endl;
           break;
         }
         case 0b011: { // aggro_proc
@@ -229,7 +232,7 @@ class Robot : public frc::TimedRobot {
         std::cout << "No auto selected" << std::endl;
       }
 
-      m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+      m_ElevatorController.SetReference(LEVEL_3, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
 
       // Reset and start the timer when the autonomous period begins
       timer.Restart();
@@ -241,7 +244,7 @@ class Robot : public frc::TimedRobot {
     void AutonomousPeriodic() override {
       static int sampleIndex = 0;
       std::vector<int> splits = auto_traj.value().splits;
-      std::optional<choreo::SwerveSample> last_sample;
+      frc::Pose2d last_sample;
 
       //auto_traj.value().GetSplit(0); // lookup function
 
@@ -249,12 +252,18 @@ class Robot : public frc::TimedRobot {
 
       //std::cout << "Sample index: " << sampleIndex << std::endl;
 
+     //std::cout << splits[splits.size()-1] << std::endl;
 
       if (auto_traj.has_value()) {
         // if we are not at a split
         // or we are not at the end
         // or we have met split conditions
-        if ( whereIs(splits, sampleIndex) < 0 || sampleIndex != splits[splits.size()-1] || metSplitCondition ) {
+        //std::cout << " Whereis: " << (whereIs(splits, sampleIndex)/* < 0*/) << std::endl;
+        std::cout << " sampleIndex: " << (sampleIndex/* < (auto_traj.value().samples.size() - 1 )*/) << std::endl;
+        //std::cout << " metsplitcondition: " << metSplitCondition << std::endl;
+
+
+        if ( whereIs(splits, sampleIndex) < 0 || sampleIndex < (auto_traj.value().samples.size() - 1 ) || metSplitCondition || true) {
           metSplitCondition = false;
           if (!timer.IsRunning()) timer.Start();
           if (splitTimer.IsRunning()) splitTimer.Stop();
@@ -278,9 +287,10 @@ class Robot : public frc::TimedRobot {
           } 
           last_timer = timer.Get().value();
 
+          std::cout << auto_traj.value().SampleAt(timer.Get(), IsRedAlliance()).value().GetTimestamp().value() << std::endl;
           // Check if we have moved to next sample and update out index
-          if (last_sample != auto_traj.value().SampleAt(timer.Get(), IsRedAlliance())) {
-            last_sample = auto_traj.value().SampleAt(timer.Get(), IsRedAlliance());
+          if (last_sample != auto_traj.value().SampleAt(timer.Get(), IsRedAlliance()).value().GetPose()) {
+            last_sample = auto_traj.value().SampleAt(timer.Get(), IsRedAlliance()).value().GetPose();
             sampleIndex++;
           }
 
@@ -290,6 +300,8 @@ class Robot : public frc::TimedRobot {
           if (!splitTimer.IsRunning()) splitTimer.Restart();
 
           int whichSplit = whereIs(splits, sampleIndex);
+          // if at end of path, run end split
+          if (sampleIndex == auto_traj.value().samples.size()-1) whichSplit = 999;
 
           std::cout << "Split #" << whichSplit << std::endl;
 
@@ -314,9 +326,9 @@ class Robot : public frc::TimedRobot {
 
         }
 
-          // if (timer.Get().value() > 8) {
-          //     m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
-          // }
+          if (timer.HasElapsed(5_s)) {
+              m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+          }
 
       }
 
@@ -345,7 +357,7 @@ class Robot : public frc::TimedRobot {
       frc::Pose2d rpose = m_swerve.m_poseEstimator.GetEstimatedPosition();
         
 
-      std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
+      //std::cout << "x" << rpose.X().value() << " y" << rpose.Y().value() << " r" << rpose.Rotation().Degrees().value() << std::endl;
 
 
 
@@ -371,8 +383,9 @@ class Robot : public frc::TimedRobot {
 
     void DriverControls(bool fieldRelative) {
       // SLOOOOOOWMODE
-      // low speed by 0.3 if holding r-trigger //0.2
-      double lowGear = m_driverController.GetRightTriggerAxis() > 0.1 ? 0.3 : 1.0;
+      // low speed by -99% if holding r-trigger //0.3
+      double lowGear = m_driverController.GetRightTriggerAxis() > 0.1 ? 0.01 : 1.0;
+      
 
       // Get the x speed. We are inverting this because Xbox controllers return
       // negative values when we push forward.
@@ -399,14 +412,16 @@ class Robot : public frc::TimedRobot {
                       Drivetrain::kMaxAngularSpeed * lowGear;
 
       auto atData = GetATagVariables();
+
+      frc::Pose2d pose = m_swerve.m_poseEstimator.GetEstimatedPosition();
       
+      //std::cout << "speeds: " << xSpeed.value() << " " << ySpeed.value() << " " << rot.value() << std::endl;
 
-
-      std::cout << "BL" << m_swerve.m_backLeft.GetPosition().angle.Degrees().value()
-                << " BR" << m_swerve.m_backRight.GetPosition().angle.Degrees().value()
-                << " FL" << m_swerve.m_frontLeft.GetPosition().angle.Degrees().value()
-                << " FR" << m_swerve.m_frontRight.GetPosition().angle.Degrees().value()
-                << std::endl;
+      // std::cout << "BL" << m_swerve.m_backLeft.GetPosition().angle.Degrees().value()
+      //           << " BR" << m_swerve.m_backRight.GetPosition().angle.Degrees().value()
+      //           << " FL" << m_swerve.m_frontLeft.GetPosition().angle.Degrees().value()
+      //           << " FR" << m_swerve.m_frontRight.GetPosition().angle.Degrees().value()
+      //           << std::endl;
 
 
 
@@ -421,9 +436,6 @@ class Robot : public frc::TimedRobot {
       m_swerve.Reset();
     }
 
-    if (m_driverController.GetXButton()) {
-      xSpeed = Drivetrain::kMaxSpeed / 4;
-    }
 
 
 
@@ -433,44 +445,52 @@ class Robot : public frc::TimedRobot {
       if (selectedTag > 11) selectedTag = 1;
     }*/
 
-    // Look To April Tag (Left Bumper)
-    if (m_driverController.GetLeftBumperButton()) {
-      rot = -atData.radsToTurn*10;
+    // Look To April Tag (Start)
+    if (m_driverController.GetStartButton()) {
+      rot = atData.radsToTurn*10;
       fieldRelative = true;
       // std::cout << (double) faceAprilTag
       //           << std::endl;
     }
 
 
-    // Pressed once
-    if (m_driverController.GetRightBumperButtonPressed()) {
-      atPreviousError = 0;
-      atIntegral = 0;
-    }
 
-    // Held bumper. Hunt and pounce (predator alignment) April Tag (Right Bumper)
-    if (m_driverController.GetRightBumperButton()) {
+    // Held bumper. Hunt and pounce (predator alignment) April Tag (X)
+    if (m_driverController.GetXButton()) {
 
+      rot = atData.radsToTurn*10; // turn robot to face tag
 
-      if (std::abs((double)atData.xSpeed) > 0.05) {
-        ySpeed = atData.ySpeed;
-        std::cout << "PID Return: " << (double)ySpeed << std::endl;
+      if (std::abs((double)atData.xSpeed) > 0.1) {
+        // move robot horizontally until we are head-on with tag
+        xSpeed = atData.xSpeed;
+        std::cout << "PID Return: " << (double)xSpeed << std::endl;
 
       } else {
+        xSpeed = 0_mps;
         // When we get aligned, start moving towards tag
-        std::cout << "Lined up" << std::endl;
-        xSpeed = atData.xSpeed;
-      }
-      
-      
+        
+        ySpeed = atData.ySpeed;
+        std::cout << "Lined up, moving with yv: " << ySpeed.value() << std::endl;
+        centeredOnTagX = pose.X().value();
 
-      
-      rot = -atData.radsToTurn*10; // turn robot to face tag
+      }
 
       fieldRelative = true;
     }
 
+
+
+
+    // Align with coral rod (triggers)
+    if (m_driverController.GetLeftBumperButton()) {
+      xSpeed = (units::velocity::meters_per_second_t) headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
+    }
+    if (m_driverController.GetRightBumperButton()) {
+      xSpeed = (units::velocity::meters_per_second_t) headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
+    }
+
     
+
     // Brake (B) and drive
     m_swerve.Drive(xSpeed, ySpeed, rot, fieldRelative, m_driverController.GetBButton());
 
@@ -482,7 +502,7 @@ class Robot : public frc::TimedRobot {
       switch (m_operatorController.GetPOV()) {
         case 0: { // up
           std::cout << "Elevator up" << std::endl;
-          m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0); //180 "max"
+          currEleRef = LEVEL_3;
           //m_MasterElevatorMotors
           break;
         }
@@ -492,7 +512,7 @@ class Robot : public frc::TimedRobot {
         }
         case 90: { // right
           std::cout << "Elelator 3" << std::endl;
-          m_ElevatorController.SetReference(100.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          currEleRef = LEVEL_2;
           break;
         }
         case 135: {
@@ -500,7 +520,7 @@ class Robot : public frc::TimedRobot {
         }
         case 180: { // down
           std::cout << "Elevator down" << std::endl;
-          m_ElevatorController.SetReference(10.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          currEleRef = LEVEL_0;
           break;
         }
         case 225: {
@@ -508,7 +528,7 @@ class Robot : public frc::TimedRobot {
         }
         case 270: { // left
           std::cout << "elevator 2" << std::endl;
-          m_ElevatorController.SetReference(45.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          currEleRef = LEVEL_1;
           break;
         }
         case 315: {
@@ -521,6 +541,14 @@ class Robot : public frc::TimedRobot {
         }
       }
 
+      if (m_operatorController.GetLeftBumper()) {
+        currEleRef -= 1.0;
+      }
+      if (m_operatorController.GetRightBumper()) {
+        currEleRef += 1.0;
+      }
+
+
 
       // Coral Motor
       if (m_operatorController.GetBButton()) {
@@ -531,6 +559,10 @@ class Robot : public frc::TimedRobot {
       } else {
         m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
       }
+
+      m_ElevatorController.SetReference(currEleRef, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+
+
 
     }
 
@@ -564,12 +596,12 @@ class Robot : public frc::TimedRobot {
 
       //move pids
       units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
-      units::meters_per_second_t proximity{ needToMoveDistController.Calculate((double) pose.X(), needToMoveDist) }; // to move to a set distance from tag
+      units::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
       
       
-      atData.radsToTurn = radsToTurn;
-      atData.ySpeed = horizontal;
-      atData.xSpeed = proximity;
+      atData.radsToTurn = -radsToTurn;
+      atData.xSpeed = horizontal;
+      atData.ySpeed = proximity;
       
       return atData;
     }
@@ -608,13 +640,13 @@ class Robot : public frc::TimedRobot {
         };
         
         if (abs( speeds.vx.value() )  < 0.001) {
-            speeds.vx = (units::meters_per_second_t) 0.0;
+            speeds.vx = 0.0_mps;
         }
         if (abs( speeds.vy.value() )  < 0.001) {
-            speeds.vy = (units::meters_per_second_t)0.0;
+            speeds.vy = 0.0_mps;
         }
         if (abs( speeds.omega.value() )  < 0.001) {
-            speeds.omega = (units::radians_per_second_t)0.0;
+            speeds.omega = 0.0_rad_per_s;
         }
         // Apply the generated speeds
         //std::cout << " New speed is " << speeds.vx.value() << std::endl;
@@ -628,7 +660,7 @@ class Robot : public frc::TimedRobot {
       bool metSplitCondition = false;
       switch (whichSplit) {
         case 0: {
-          m_ElevatorController.SetReference(150.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          m_ElevatorController.SetReference(LEVEL_3, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           metSplitCondition = true;
           break;
         }
@@ -707,15 +739,16 @@ class Robot : public frc::TimedRobot {
       bool metSplitCondition = false;
       switch (whichSplit) {
         case 0: {
-          m_ElevatorController.SetReference(185.0, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+          m_ElevatorController.SetReference(LEVEL_3, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
           metSplitCondition = true;
           break;
         }
-        case 1: {
+        case 999: {
           m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
           if (splitTimer.HasElapsed(1.0_s)) {
             m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.0);
             metSplitCondition = true;
+
           }
           break;
         }

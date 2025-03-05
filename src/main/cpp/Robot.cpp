@@ -463,7 +463,7 @@ class Robot : public frc::TimedRobot {
       if (std::abs((double)atData.xSpeed) > 0.1) {
         // move robot horizontally until we are head-on with tag
         //xSpeed = atData.xSpeed;
-        //std::cout << "PID Return: " << (double)xSpeed << std::endl;
+        std::cout << "PID Return: " << atData.ySpeed.value() << std::endl;
         ySpeed = atData.ySpeed;
 
       } else {

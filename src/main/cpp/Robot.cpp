@@ -425,7 +425,7 @@ class Robot : public frc::TimedRobot {
 
 
 
-
+    //std::cout << "Speed after joysticks -> X: " << xSpeed.value() << ", Y: " << ySpeed.value() << ", Rot: " << rot.value() << std::endl;
 
 
     // Relative Switch (A)
@@ -458,20 +458,22 @@ class Robot : public frc::TimedRobot {
     // Held bumper. Hunt and pounce (predator alignment) April Tag (X)
     if (m_driverController.GetXButton()) {
 
-      rot = atData.radsToTurn*10; // turn robot to face tag
+      //rot = atData.radsToTurn*10; // turn robot to face tag
 
       if (std::abs((double)atData.xSpeed) > 0.1) {
         // move robot horizontally until we are head-on with tag
-        xSpeed = atData.xSpeed;
-        std::cout << "PID Return: " << (double)xSpeed << std::endl;
+        //xSpeed = atData.xSpeed;
+        //std::cout << "PID Return: " << (double)xSpeed << std::endl;
+        ySpeed = atData.ySpeed;
 
       } else {
-        xSpeed = 0_mps;
+        //xSpeed = 0_mps;
+        ySpeed = 0_mps;
         // When we get aligned, start moving towards tag
-        
-        ySpeed = atData.ySpeed;
-        std::cout << "Lined up, moving with yv: " << ySpeed.value() << std::endl;
-        centeredOnTagX = pose.X().value();
+        std::cout << "Lined Up" << std::endl;
+        //ySpeed = -atData.ySpeed;
+        //std::cout << "Lined up, moving with yv: " << -ySpeed.value() << std::endl;
+        //centeredOnTagX = pose.X().value();
 
       }
 
@@ -483,10 +485,10 @@ class Robot : public frc::TimedRobot {
 
     // Align with coral rod (triggers)
     if (m_driverController.GetLeftBumperButton()) {
-      xSpeed = (units::velocity::meters_per_second_t) headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
+      xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
     }
     if (m_driverController.GetRightBumperButton()) {
-      xSpeed = (units::velocity::meters_per_second_t) headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
+      xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
     }
 
     
@@ -594,15 +596,19 @@ class Robot : public frc::TimedRobot {
       // Converts degrees from vision thread to radians per second.
       units::angular_velocity::radians_per_second_t radsToTurn{ degreesToTurn * M_PI / 180 };
 
-      //move pids
-      units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
-      units::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
+      //move pids (from comp)
+      //units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
+      //units::velocity::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
       
+      units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
       
       atData.radsToTurn = -radsToTurn;
-      atData.xSpeed = horizontal;
-      atData.ySpeed = proximity;
+      //atData.xSpeed = horizontal;
+      //atData.ySpeed = proximity;
       
+      atData.xSpeed = 0_mps;
+      atData.ySpeed = horizontal;
+
       return atData;
     }
 

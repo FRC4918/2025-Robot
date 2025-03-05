@@ -154,6 +154,10 @@ void VisionThread() {
         // determine pose
         frc::Transform3d pose = estimator.Estimate(*detection);
 
+        //MM trying to extract proper values from tag pose
+        //std::cout << "Transform3d vals -> X: " << pose.X().value() << ", Y: " << pose.Y().value() << ", Z: " << pose.Z().value() << std::endl;
+
+
         // put pose into NT
         frc::Rotation3d rotation = pose.Rotation();
         tagsTable->GetEntry(fmt::format("pose_{}", detection->GetId()))
@@ -179,8 +183,8 @@ void VisionThread() {
         double tagHeadOnDegs[3] = { rotation.X().value(), rotation.Y().value(), rotation.Z().value() };
         //auto tagHeadOnDeg = tagsTable->GetEntry("apriltags/pose_X")
 
-        std::cout << "Tag ID: " << detection->GetId() << " | X: " << tagHeadOnDegs[0] << " | Y: " << tagHeadOnDegs[1] << " | Z: " << tagHeadOnDegs[2]
-          << std::endl;
+        //std::cout << "Tag ID: " << detection->GetId() << " | X: " << tagHeadOnDegs[0] << " | Y: " << tagHeadOnDegs[1] << " | Z: " << tagHeadOnDegs[2]
+        //  << std::endl;
         double tagRotDist = (g_size.width/2)-c.x; //tag distance from center
         double tagRotDistDeg = tagRotDist / 10; // tag distance in degrees, roughly
         
@@ -189,7 +193,7 @@ void VisionThread() {
         // How far we want to be from the tag
         units::length::meter_t targetDist; // Tag distance (Z-Axis)
 
-
+        std::cout << "Our values -> Tag Y (left to right): " << tagRotDist << ", Tag X (distance away): " << tagDist.value() << std::endl;
 
         // Set global variables to use april tag data
 
@@ -244,7 +248,8 @@ void VisionThread() {
           }
 
         }
-        needToMoveDist = tagDist - targetDist;
+        
+         needToMoveDist = tagDist - targetDist;
 
       //}
       

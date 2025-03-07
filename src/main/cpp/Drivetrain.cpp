@@ -27,7 +27,7 @@ void Drivetrain::Drive( units::meters_per_second_t xSpeed,
 {
    frc::Rotation2d m_gyro_GetRotation2d { m_gyro.GetAngle() };
 
-   std::cout << "Current X speed: " << xSpeed.value() << ", Y speed: " << ySpeed.value() << std::endl;
+   //std::cout << "Current X speed: " << xSpeed.value() << ", Y speed: " << ySpeed.value() << std::endl;
 
    auto states = m_kinematics.ToSwerveModuleStates(
        fieldRelative ? frc::ChassisSpeeds::FromFieldRelativeSpeeds(

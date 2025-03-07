@@ -37,16 +37,15 @@
 #define LEVEL_0 5.0 // aka trough
 #define LEVEL_1 45.0
 #define LEVEL_2 95.0 //100
-#define LEVEL_3 180.0
+#define LEVEL_3 175.0
 
 //Vision vars
 double desiredYaw;
 units::length::meter_t needToMoveDist;
 double headOnOffsetDeg;
-double centeredOnTagX = 0;
 
-frc::PIDController headOnController{0.001, 0.0, 0.0}; // angle (removed D, was 0.1)
-frc::PIDController needToMoveDistController{10.0, 0.0, 0.0}; // sideshift
+frc::PIDController headOnController{1.0, 0.0, 0.1}; // angle (removed D, was 0.1) // MM was 0.1
+frc::PIDController needToMoveDistController{1.0, 0.0, 0.0}; // proximity to tag // MM was 0.1
 
 
 //Robot Pos Variables
@@ -105,11 +104,12 @@ class Robot : public frc::TimedRobot {
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_aggro_proc = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("aggressive_proc");
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
   std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_help_premium = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("help");
-  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_push = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("push");
+  std::optional<choreo::Trajectory<choreo::SwerveSample>> traj_reefside = choreo::Choreo::LoadTrajectory<choreo::SwerveSample>("reefside");
 
 
   //*(bool autoSplitShenanigans());
-
+  //auto variable
+  bool gyroReset = false;
 
   public:
   // frc::Encoder leftEncoder{0, 1};  // DIO ports 0 and 1 for the left encoder ...
@@ -173,9 +173,9 @@ class Robot : public frc::TimedRobot {
           std::cout << "auto: help" << std::endl;
           break;
         }
-        case 0b1001: { // help_premium
-          auto_traj = traj_help_premium;
-          std::cout << "auto: help p" << std::endl;
+        case 0b1001: { // reefside
+          auto_traj = traj_reefside;
+          std::cout << "auto: reefside" << std::endl;
           break;
         }
         case 0b0100: { // frfr
@@ -189,8 +189,8 @@ class Robot : public frc::TimedRobot {
           break;
         }
         case 0b0010: { // push
-          auto_traj = traj_push;
-          std::cout << "auto: pusher" << std::endl;
+          //auto_traj = traj_push;
+          //std::cout << "auto: pusher" << std::endl;
           break;
         }
         case 0b011: { // aggro_proc
@@ -232,8 +232,8 @@ class Robot : public frc::TimedRobot {
         std::cout << "No auto selected" << std::endl;
       }
 
-      m_ElevatorController.SetReference(LEVEL_3, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
-
+      //m_ElevatorController.SetReference(LEVEL_3, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+      gyroReset = false;
       // Reset and start the timer when the autonomous period begins
       timer.Restart();
       //timer.Stop //timer affects 
@@ -254,7 +254,7 @@ class Robot : public frc::TimedRobot {
 
      //std::cout << splits[splits.size()-1] << std::endl;
 
-      if (auto_traj.has_value()) {
+      if (auto_traj.has_value() && !timer.HasElapsed(3_s)) {
         // if we are not at a split
         // or we are not at the end
         // or we have met split conditions
@@ -295,42 +295,63 @@ class Robot : public frc::TimedRobot {
           }
 
         } else { // In a split
-          std::cout << "Splitting..." << std::endl;
-          if (timer.IsRunning()) timer.Stop();
-          if (!splitTimer.IsRunning()) splitTimer.Restart();
+          // std::cout << "Splitting..." << std::endl;
+          // if (timer.IsRunning()) timer.Stop();
+          // if (!splitTimer.IsRunning()) splitTimer.Restart();
 
-          int whichSplit = whereIs(splits, sampleIndex);
-          // if at end of path, run end split
-          if (sampleIndex == auto_traj.value().samples.size()-1) whichSplit = 999;
+          // int whichSplit = whereIs(splits, sampleIndex);
+          // // if at end of path, run end split
+          // if (sampleIndex == auto_traj.value().samples.size()-1) whichSplit = 999;
 
-          std::cout << "Split #" << whichSplit << std::endl;
+          // std::cout << "Split #" << whichSplit << std::endl;
 
 
           //metSplitCondition = autoSplitShenanigans();
 
-          if (auto_traj == traj_frfr) {
-            metSplitCondition = autoSplitFRFR(whichSplit);
-            std::cout << "frfr split" << std::endl;
-          } else if (auto_traj == traj_aggro) {
-            metSplitCondition = autoSplitAggro(whichSplit);
-            std::cout << "aggro split" << std::endl;
-          } else if (auto_traj == traj_help_premium) {
-            metSplitCondition = autoSplitHELPP(whichSplit);
-            std::cout << "helpp split" << std::endl;
-          } else {
-            //metSplitCondition = autoSplitHELPP(whichSplit);
-            std::cout << "no split function for this auto" << std::endl;
-          }
+          // if (auto_traj == traj_frfr) {
+          //   metSplitCondition = autoSplitFRFR(whichSplit);
+          //   std::cout << "frfr split" << std::endl;
+          // } else if (auto_traj == traj_aggro) {
+          //   metSplitCondition = autoSplitAggro(whichSplit);
+          //   std::cout << "aggro split" << std::endl;
+          // } else if (auto_traj == traj_help_premium) {
+          //   metSplitCondition = autoSplitHELPP(whichSplit);
+          //   std::cout << "helpp split" << std::endl;
+          // } else {
+          //   //metSplitCondition = autoSplitHELPP(whichSplit);
+          //   std::cout << "no split function for this auto" << std::endl;
+          // }
 
           //Hard coded coral placement (because auto ain't working)
 
         }
 
-          if (timer.HasElapsed(5_s)) {
-              m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
-          }
-
       }
+
+      if (timer.HasElapsed(13_s)) {
+           m_swerve.Drive(0.0_mps, 0.0_mps, 0.0_rad_per_s, false, false);
+           m_CoralMotor.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1.0);
+        } else if (timer.HasElapsed(12_s)) {
+          m_swerve.Drive(0.0_mps, 0.0_mps, 0.0_rad_per_s, false, false);
+          m_ElevatorController.SetReference(LEVEL_1, SparkBase::ControlType::kPosition, rev::spark::kSlot0);
+        } else if (timer.HasElapsed(10_s)) {
+            if (!gyroReset)
+            {
+              m_swerve.Drive(0.0_mps, 0.0_mps, 0.0_rad_per_s, false, false);
+              m_swerve.Reset();
+              gyroReset = true;
+            }
+            if (m_swerve.m_poseEstimator.GetEstimatedPosition().Y() < 0.17_m) {
+              m_swerve.Drive(0.0_mps, 0.01_mps, 0.0_rad_per_s, false, false);
+            } else {
+              m_swerve.Drive(0.0_mps, 0.0_mps, 0.0_rad_per_s, false, false);
+            }
+        } else if (timer.HasElapsed(3_s)) {
+            auto atData = GetATagVariables();
+            auto rot = atData.radsToTurn*10;
+            m_swerve.Drive(-atData.xSpeed, -atData.ySpeed, rot, false, false);
+           
+        }
 
       m_swerve.UpdateOdometry();
       
@@ -457,39 +478,36 @@ class Robot : public frc::TimedRobot {
 
     // Held bumper. Hunt and pounce (predator alignment) April Tag (X)
     if (m_driverController.GetXButton()) {
-
-      if (/*std::abs((double)atData.ySpeed) > 0.1*/ std::abs(headOnOffsetDeg) > 0.03) {
+      std::cout << "NTMD: " << needToMoveDist.value() << std::endl;
+      if (std::abs(headOnOffsetDeg) > 0.1 || std::abs(needToMoveDist.value()) > 0.55) {
         // move robot horizontally until we are head-on with tag
         //xSpeed = atData.xSpeed;
-        std::cout << "PID Return: " << atData.ySpeed.value() << std::endl;
+        //std::cout << "PID Return: " << atData.ySpeed.value() << std::endl;
         ySpeed = -atData.ySpeed;
-
+        
+        xSpeed = -atData.xSpeed;
       } else {
-        //xSpeed = 0_mps;
+        // xSpeed = -atData.xSpeed;
+        xSpeed = 0_mps;
         ySpeed = 0_mps;
         // When we get aligned, start moving towards tag
-        std::cout << "Lined Up" << std::endl;
-        //ySpeed = -atData.ySpeed;
+        std::cout << "LU" << std::endl;
+        
         //std::cout << "Lined up, moving with yv: " << -ySpeed.value() << std::endl;
-        centeredOnTagX = pose.X().value();
+
+
 
       }
 
       rot = atData.radsToTurn*10; // turn robot to face tag
+      //xSpeed = -atData.xSpeed;
+
+      //rot = atData.radsToTurn*10; // turn robot to face tag
 
       fieldRelative = true;
     }
 
 
-
-
-    // Align with coral rod (triggers)
-    // if (m_driverController.GetLeftBumperButton()) {
-    //   xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
-    // }
-    // if (m_driverController.GetRightBumperButton()) {
-    //   xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
-    // }
 
     
 
@@ -550,6 +568,15 @@ class Robot : public frc::TimedRobot {
         currEleRef += 1.0;
       }
 
+      if (m_operatorController.GetLeftBumper() || m_operatorController.GetRightBumper()) {
+        m_operatorController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.5);
+        std::cout << "currEleRef: " << currEleRef << std::endl;
+        // safety
+        std::cout << "currVoltPercent: " << m_MasterElevatorMotor.GetAppliedOutput() << std::endl;
+      } else {
+        m_operatorController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.0);
+      }
+
 
 
       // Coral Motor
@@ -580,6 +607,7 @@ class Robot : public frc::TimedRobot {
       units::velocity::meters_per_second_t xSpeed;
       units::velocity::meters_per_second_t ySpeed;
     };
+    // returns collection of april tag related data
     ATagVars GetATagVariables() {
       ATagVars atData;
 
@@ -595,27 +623,26 @@ class Robot : public frc::TimedRobot {
       if (degreesToTurn < -180) degreesToTurn += 360;
       // Converts degrees from vision thread to radians per second.
       units::angular_velocity::radians_per_second_t radsToTurn{ degreesToTurn * M_PI / 180 };
+  
+      // //onset dementia (why didn't i think of this)
+      units::velocity::meters_per_second_t horizontal;
+      // if (m_driverController.GetLeftBumperButton()) {
+      //     horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 5)}; // to move to align head-on with left reef
+      // } else if (m_driverController.GetRightBumperButton()) {
+      //     horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, -5)}; // to move to align head-on with right reef
+      // } else {
+      //     horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 0)}; // to move to align head-on with tag
+      // }
+      horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 0)};
+      //mmmm how far are we told to be from anything, but usually an april tag?
+      units::velocity::meters_per_second_t proximity = units::velocity::meters_per_second_t{needToMoveDistController.Calculate((double)needToMoveDist, 0)};
 
-      //move pids (from comp)
-      //units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
-      //units::velocity::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
-      
-    units::velocity::meters_per_second_t horizontal;
-    
-    if (m_driverController.GetLeftBumperButton()) {
-        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 5)}; // to move to align head-on with left reef
-    } else if (m_driverController.GetRightBumperButton()) {
-        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, -5)}; // to move to align head-on with right reef
-    } else {
-        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 0)}; // to move to align head-on with tag
-    }
 
-      std::cout << "headonoffsetdeg: " << headOnOffsetDeg << std::endl;
+      //package variables for shipping (don't forget the bow! 🎀)
+      //std::cout << "headonoffsetdeg: " << headOnOffsetDeg << std::endl;
+      //std::cout << "needtomovedist: " << (double)needToMoveDist << " | prox: " << (double)proximity << std::endl;
       atData.radsToTurn = -radsToTurn;
-      //atData.xSpeed = horizontal;
-      //atData.ySpeed = proximity;
-      
-      atData.xSpeed = 0_mps;
+      atData.xSpeed = proximity;
       atData.ySpeed = horizontal;
 
       return atData;

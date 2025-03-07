@@ -58,7 +58,7 @@ public:
    static constexpr units::radians_per_second_t kMaxAngularSpeed{
       4.0*std::numbers::pi}; // 2 full rotations per second
 
-private:
+
 
 #ifdef JAG_PREVIOUS_EXPERIMENTAL_ROBOT
        // These values worked well in our experimental swerve robot:
@@ -79,7 +79,7 @@ private:
    frc::Translation2d m_backLeftLocation{  -0.324_m, +0.248_m};
 #endif
 
-public:
+
 #ifdef JAG_PREVIOUS_EXPERIMENTAL_ROBOT
    SwerveModule m_frontLeft{8, 9, 0, 36};
    SwerveModule m_frontRight{10, 11, 1, 34};
@@ -93,7 +93,7 @@ public:
    SwerveModule m_frontLeft{  7, 8, 14, 247 };
 #endif
 
-private:
+
    //frc::AnalogGyro m_gyro{0};
    // ctre::phoenix::sensors::WPI_PigeonIMU m_gyro{1};
    frc::ADIS16470_IMU m_gyro;
@@ -102,7 +102,7 @@ private:
        m_frontLeftLocation, m_frontRightLocation, m_backLeftLocation,
        m_backRightLocation};
 
-public:
+
   //  jag; frc::SwerveDriveOdometry<4> m_odometry{
   //  jag;     m_kinematics,
   //  jag;     m_gyro.GetRotation2d(),

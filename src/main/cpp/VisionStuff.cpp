@@ -46,7 +46,7 @@ void VisionThread() {
     //camera2 = frc::CameraServer::StartAutomaticCapture(1); //April Tag Camera
 
     // Set the resolution
-    front_camera.SetResolution(160, 120); //160, 120 //320, 240 //640, 480 //480, 360 - MM reduced to save memory, could probably increase back to 480,360
+    front_camera.SetResolution(320, 240); //160, 120 //320, 240 //640, 480 //480, 360 - MM reduced to save memory, could probably increase back to 480,360
     //camera2.SetResolution(640, 480);
 
     // Get a CvSink. This will capture Mats from the Camera
@@ -176,7 +176,7 @@ void VisionThread() {
         // Only update tag vars if we select the detected tag
         //if (detection->GetId() == selectedTag) {
         //draw selected thing
-        cv::circle(mat, cv::Point(c.x, c.y), 10, selectedColor, 3);
+        //cv::circle(mat, cv::Point(c.x, c.y), 10, selectedColor, 3);
 
 
         // Get angle we're off from being head-on with the tag (0 degrees)
@@ -238,7 +238,7 @@ void VisionThread() {
           case 21:
           case 22: {
             // align elevator with coral acceptor things
-            targetDist = 0.0_m;
+            targetDist = 0.5_m;
             break;
           }
 

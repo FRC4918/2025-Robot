@@ -181,6 +181,10 @@ void MotorInitKraken(ctre::phoenix6::hardware::TalonFX &m_motor)
    //config.VoltageCompensation(12.0);
    //MM 2/23/25: Kraken doesn't have voltage compensation?
 
+   ctre::phoenix6::configs::VoltageConfigs m_VoltageComps{};
+   m_VoltageComps.WithPeakForwardVoltage(units::volt_t(12.0));
+   m_VoltageComps.WithPeakReverseVoltage(units::volt_t(-12.0));
+
    // Set ramp rate (how fast motor accelerates or decelerates).
    // We may have to try different RampRates here to
    // eliminate drivetrain chattering.
@@ -356,6 +360,7 @@ void SwerveModule::SetDesiredState(
    if ( bFreezeDriveMotor ) {
       m_driveMotor.SetVoltage(units::volt_t{0.0});
    } else {
+      //std::cout << "Setting motors to: " << driveOutput + driveFeedforward.value() << " volts" << std::endl;
       m_driveMotor.SetVoltage(units::volt_t{driveOutput} + driveFeedforward);
    }
    //printf("TurnFeedForward %d: %f\n", m_turningMotor.GetDeviceId(), turnFeedforward.value());

@@ -49,8 +49,12 @@ public:
 
         // Both of the below "maximums" are about twice what the robot
         // can actually do (about 3 meters/second and about 1 rotation/second)
+        // MM 2025: Setting the maximum from 3.5 to 14.0 more than doubled our speed.
+        //          It's not reflective of our actual maximum speed but still gets
+        //          us moving faster while maintaining finer control at lower speeds.
+        //          At 14.0 for kMaxSpeed, we push about 11 volts over the drive motors.
    static constexpr units::meters_per_second_t kMaxSpeed =
-       3.5_mps; // about 5.5 meters per second //Default: 5.5
+       14.0_mps; //Was 3.5 for Glacier Peak 2025
    static constexpr units::radians_per_second_t kMaxAngularSpeed{
       4.0*std::numbers::pi}; // 2 full rotations per second
 

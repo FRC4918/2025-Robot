@@ -207,7 +207,7 @@ void VisionThread() {
         // Predator Alignment
         // Tag headon
         headOnOffsetDeg = tagHeadOnDegs[1];
-        std::cout << headOnOffsetDeg << std::endl;
+        //std::cout << headOnOffsetDeg << std::endl;
 
 
         

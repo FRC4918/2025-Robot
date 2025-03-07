@@ -43,9 +43,9 @@ public:
    void SetDesiredState( const frc::SwerveModuleState &state, bool bFreezeDriveMotor = false );
 
 private:
-   static constexpr double kWheelRadius = 0.319;
+   //static constexpr double kWheelRadius = 0.319;
    // CHANGE THIS LATER ^^^^
-   static constexpr int kEncoderResolution = 4096;
+   //static constexpr int kEncoderResolution = 4096;
 
    static constexpr auto kModuleMaxAngularVelocity = std::numbers::pi * 10_rad_per_s; // radians per second
    static constexpr auto kModuleMaxAngularAcceleration = std::numbers::pi * 20_rad_per_s / 1_s; // radians per second^2
@@ -66,12 +66,12 @@ private:
        0.0};
 
    frc::ProfiledPIDController<units::radians> m_turningPIDController{
-       5.0, //previously 8.0 on 2024 swerve
+       5.0, //previously 8.0 on 2024 swerve, 5.0 at Glacier Peak 2025
        0.0,
-       0.0, //previously .001 on 2024 swerve
+       0.001, //previously .001 on 2024 swerve
        {kModuleMaxAngularVelocity, kModuleMaxAngularAcceleration}};
                                                                     // was 1.0
-   frc::SimpleMotorFeedforward<units::meters> m_driveFeedforward{4.0_V, 1_V / 1_mps};
+   frc::SimpleMotorFeedforward<units::meters> m_driveFeedforward{1.0_V, 1_V / 1_mps};
    frc::SimpleMotorFeedforward<units::radians> m_turnFeedforward{0.1_V /*was 0.1*/, 0.025_V /* was 0.025*/ / 1_rad_per_s};
 };
 // originally .5_V on line 72 made 0.025_V and 3_V on line 70 made 1_V

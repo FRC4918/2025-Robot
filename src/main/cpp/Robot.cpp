@@ -36,7 +36,7 @@
 //Elevator poses
 #define LEVEL_0 5.0 // aka trough
 #define LEVEL_1 45.0
-#define LEVEL_2 100.0
+#define LEVEL_2 95.0 //100
 #define LEVEL_3 180.0
 
 //Vision vars
@@ -45,7 +45,7 @@ units::length::meter_t needToMoveDist;
 double headOnOffsetDeg;
 double centeredOnTagX = 0;
 
-frc::PIDController headOnController{0.5, 0.0, 0.1}; // angle
+frc::PIDController headOnController{0.001, 0.0, 0.0}; // angle (removed D, was 0.1)
 frc::PIDController needToMoveDistController{10.0, 0.0, 0.0}; // sideshift
 
 
@@ -458,7 +458,7 @@ class Robot : public frc::TimedRobot {
     // Held bumper. Hunt and pounce (predator alignment) April Tag (X)
     if (m_driverController.GetXButton()) {
 
-      if (/*std::abs((double)atData.ySpeed) > 0.1*/ std::abs(headOnOffsetDeg) > 0.1) {
+      if (/*std::abs((double)atData.ySpeed) > 0.1*/ std::abs(headOnOffsetDeg) > 0.03) {
         // move robot horizontally until we are head-on with tag
         //xSpeed = atData.xSpeed;
         std::cout << "PID Return: " << atData.ySpeed.value() << std::endl;
@@ -484,12 +484,12 @@ class Robot : public frc::TimedRobot {
 
 
     // Align with coral rod (triggers)
-    if (m_driverController.GetLeftBumperButton()) {
-      xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
-    }
-    if (m_driverController.GetRightBumperButton()) {
-      xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
-    }
+    // if (m_driverController.GetLeftBumperButton()) {
+    //   xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX-0.5); 
+    // }
+    // if (m_driverController.GetRightBumperButton()) {
+    //   xSpeed = (units::velocity::meters_per_second_t) -headOnController.Calculate(pose.X().value(), centeredOnTagX+0.5); 
+    // }
 
     
 
@@ -600,7 +600,16 @@ class Robot : public frc::TimedRobot {
       //units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
       //units::velocity::meters_per_second_t proximity{ needToMoveDistController.Calculate((double)needToMoveDist, 0) }; // to move to a set distance from tag
       
-      units::velocity::meters_per_second_t horizontal{ headOnController.Calculate(headOnOffsetDeg, 0) }; // to move to align head-on with tag
+    units::velocity::meters_per_second_t horizontal;
+    
+    if (m_driverController.GetLeftBumperButton()) {
+        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 5)}; // to move to align head-on with left reef
+    } else if (m_driverController.GetRightBumperButton()) {
+        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, -5)}; // to move to align head-on with right reef
+    } else {
+        horizontal = units::velocity::meters_per_second_t{headOnController.Calculate(headOnOffsetDeg, 0)}; // to move to align head-on with tag
+    }
+
       std::cout << "headonoffsetdeg: " << headOnOffsetDeg << std::endl;
       atData.radsToTurn = -radsToTurn;
       //atData.xSpeed = horizontal;

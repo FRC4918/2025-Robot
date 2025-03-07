@@ -27,12 +27,24 @@ void Drivetrain::Drive( units::meters_per_second_t xSpeed,
 {
    frc::Rotation2d m_gyro_GetRotation2d { m_gyro.GetAngle() };
 
+   std::cout << "Current X speed: " << xSpeed.value() << ", Y speed: " << ySpeed.value() << std::endl;
+
    auto states = m_kinematics.ToSwerveModuleStates(
        fieldRelative ? frc::ChassisSpeeds::FromFieldRelativeSpeeds(
                            xSpeed, ySpeed, rot, m_gyro_GetRotation2d)
                      : frc::ChassisSpeeds{xSpeed, ySpeed, rot});
 
+   //std::cout << "Swerve Speeds before Desaturation: " << states[0].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds before Desaturation: " << states[1].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds before Desaturation: " << states[2].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds before Desaturation: " << states[3].speed.value() << std::endl;
+
    m_kinematics.DesaturateWheelSpeeds(&states, kMaxSpeed);
+
+   //std::cout << "Swerve Speeds after Desaturation: " << states[0].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds after Desaturation: " << states[1].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds after Desaturation: " << states[2].speed.value() << std::endl;
+   //std::cout << "Swerve Speeds after Desaturation: " << states[3].speed.value() << std::endl;
 
    auto [fl, fr, bl, br] = states;
 
